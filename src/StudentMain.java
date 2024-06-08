@@ -1,6 +1,6 @@
-import rs.etf.sab.*;
-import tests.TestHandler;
-import tests.TestRunner;
+import rs.etf.sab.operations.*;
+import rs.etf.sab.tests.TestHandler;
+import rs.etf.sab.tests.TestRunner;
 
 
 public class StudentMain {
