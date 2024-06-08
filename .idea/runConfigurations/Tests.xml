@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tests" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="StudentMain" />
+    <module name="project" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
