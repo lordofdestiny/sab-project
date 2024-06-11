@@ -1,3 +1,12 @@
+IF EXISTS(
+    SELECT name FROM sys.databases WHERE name = 'PackageTransportation'
+)BEGIN
+    DROP DATABASE PackageTransportation
+END
+GO
+
+CREATE DATABASE PackageTransportation
+GO
 
 CREATE TYPE [MyDecimal]
     FROM DECIMAL(10,3) NOT NULL
