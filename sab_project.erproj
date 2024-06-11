@@ -9,7 +9,7 @@
                "Location": "C:\\Users\\djumi\\Desktop\\SAB_projekat_2324\\project\\models",
                "Type": "ParentFolder",
                "Models": {
-                    "pia_project": {
+                    "PackageTransportation": {
                          "Location": "C:\\Users\\djumi\\Desktop\\SAB_projekat_2324\\project\\models\\db200260.erwin",
                          "MartLocation": "",
                          "MartModel": false,
