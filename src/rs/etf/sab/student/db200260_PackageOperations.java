@@ -174,7 +174,23 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public Date getAcceptanceTime(int packageId) {
-        return null;
+        final var connection = DB.getInstance().getConnection();
+        try (final var packageStatus = connection.prepareStatement(
+                "SELECT [TimeAccepted] FROM [Package] WHERE [IdPkg] = ?"
+        )) {
+            packageStatus.setInt(1, packageId);
+            try (final var resultSet = packageStatus.executeQuery()) {
+                if (resultSet.next()) {
+                    // This also correctly handles the case
+                    // when no offer was not accepted so far
+                    // and the field NULL
+                    return resultSet.getDate(1);
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            return null;
+        }
     }
 
     @Override
