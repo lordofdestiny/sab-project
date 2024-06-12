@@ -8,6 +8,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.List;
 
 public class db200260_PackageOperations implements PackageOperations {
@@ -71,7 +72,20 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public List<Integer> getAllOffers() {
-        return List.of();
+        final var connection = DB.getInstance().getConnection();
+        try (final var getOffers = connection.createStatement();
+             final var offerIdSet = getOffers.executeQuery(
+                     "SELECT [IdOff] FROM [Offer]"
+             )
+        ) {
+            final var offers = new ArrayList<Integer>();
+            while (offerIdSet.next()) {
+                offers.add(offerIdSet.getInt(1));
+            }
+            return offers;
+        } catch (SQLException e) {
+            return List.of();
+        }
     }
 
     @Override
