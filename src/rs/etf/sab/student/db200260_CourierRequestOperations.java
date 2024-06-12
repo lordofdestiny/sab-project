@@ -75,6 +75,16 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
 
     @Override
     public boolean grantRequest(String username) {
-        return false;
-    }
+        final var connection = DB.getInstance().getConnection();
+        try (final var insertRequest = connection.prepareCall(
+                "{? = call [spGrantRequest](?)}"
+        )) {
+            insertRequest.registerOutParameter(1, Types.INTEGER);
+            insertRequest.setString("username", username);
+            insertRequest.execute();
+
+            return insertRequest.getInt(1) == 0;
+        } catch (SQLException e) {
+            return false;
+        }    }
 }

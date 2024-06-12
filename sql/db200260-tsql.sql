@@ -21,7 +21,7 @@ BEGIN
     IF EXISTS (SELECT [IdUser] FROM [Courier] WHERE [IdUser] = @IdUser) RETURN 3;
 
     -- Verify that vehicle is not already used, before creating the request
-    IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh) RETURN 3;
+    IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh) RETURN 4;
 
     -- Try to insert a new request, fails if user already posted a request
     BEGIN TRY
@@ -63,4 +63,46 @@ BEGIN
     RETURN 0;
 END
 
+go
+
+-- Accept Courier Request
+DROP PROCEDURE IF EXISTS [spGrantRequest];
+go
+
+CREATE PROCEDURE [spGrantRequest]
+@username VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdUser int
+    DECLARE @IdVeh int
+
+    SELECT @IdUser = u.[IdUser], @IdVeh = [IdVeh]
+    FROM [CourierRequest] cr JOIN [User] u ON (cr.[IdUser] = u.[IdUser])
+    WHERE [Username] = @username;
+    IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits and that he has a request
+
+    DECLARE @errorcode int
+    SET @errorcode = 0
+    BEGIN TRY
+        -- Insert user as courier
+        INSERT INTO [Courier](IdUser, IdVeh) VALUES(@IdUser, @IdVeh)
+        IF @@ROWCOUNT != 1 SET @errorcode = 2 -- Verify that the user was inserted
+
+        -- Delete request
+        DELETE FROM [CourierRequest] WHERE [IdUser] = @IdUser
+        IF @@ROWCOUNT != 1 SET @errorcode = 3 -- Verify that the request was deleted
+    END TRY
+    BEGIN CATCH
+        SET @errorcode = 4
+    END CATCH
+
+    IF @errorcode != 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+        END
+
+    RETURN @errorcode
+END
 go
