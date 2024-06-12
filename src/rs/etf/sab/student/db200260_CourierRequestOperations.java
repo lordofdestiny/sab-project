@@ -4,6 +4,7 @@ import rs.etf.sab.student.util.DB;
 
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.List;
 
 public class db200260_CourierRequestOperations implements rs.etf.sab.operations.CourierRequestOperation {
@@ -56,7 +57,20 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
 
     @Override
     public List<String> getAllCourierRequests() {
-        return List.of();
+        final var connection = DB.getInstance().getConnection();
+        try(final var getRequests = connection.createStatement();
+            final var courierRequests = getRequests.executeQuery(
+              "SELECT [Username] FROM [CourierRequest] cr JOIN [User] u ON (cr.IdUser = u.IdUser)"
+            )
+        ){
+            final var usernames = new ArrayList<String>();
+            while (courierRequests.next()){
+                usernames.add(courierRequests.getString(1));
+            }
+            return usernames;
+        }catch (SQLException e){
+            return List.of();
+        }
     }
 
     @Override
