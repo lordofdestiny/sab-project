@@ -5,12 +5,10 @@ import rs.etf.sab.student.util.DB;
 import rs.etf.sab.student.util.Offer;
 
 import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class db200260_PackageOperations implements PackageOperations {
     @Override
@@ -195,7 +193,23 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public List<Integer> getAllPackagesWithSpecificType(int type) {
-        return List.of();
+        final var connection = DB.getInstance().getConnection();
+        try(final var getPackages = connection.prepareStatement(
+                "SELECT [IdPkg] FROM [Package] WHERE [PackageType] = ?"
+        )){
+            //noinspection DuplicatedCode
+            getPackages.setInt(1, type);
+            try(final var packageSet = getPackages.executeQuery()){
+                final var packages = new ArrayList<Integer>();
+                while (packageSet.next()) {
+                    packages.add(packageSet.getInt(1));
+                }
+                return packages;
+            }
+        }
+        catch (SQLException e){
+            return List.of();
+        }
     }
 
     @Override

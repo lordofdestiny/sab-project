@@ -88,6 +88,7 @@ public class db200260_DistrictOperations implements rs.etf.sab.operations.Distri
         try (final var ps = connection.prepareStatement(
                 "SELECT [IdDist] FROM [District] WHERE [IdCity] = ?")
         ) {
+            //noinspection DuplicatedCode
             ps.setInt(1, idCity);
             try (final var rs = ps.executeQuery()) {
                 final var districts = new ArrayList<Integer>();
