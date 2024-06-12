@@ -70,7 +70,7 @@ DROP PROCEDURE IF EXISTS [spGrantRequest];
 go
 
 CREATE PROCEDURE [spGrantRequest]
-@username VARCHAR(100)
+    @username VARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -99,9 +99,9 @@ BEGIN
     END CATCH
 
     IF @errorcode != 0
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
+    BEGIN
+        ROLLBACK TRANSACTION;
+    END
 
     RETURN @errorcode
 END
