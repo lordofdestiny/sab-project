@@ -1,4 +1,6 @@
+import org.junit.rules.TestWatcher;
 import rs.etf.sab.operations.*;
+import rs.etf.sab.student.*;
 import rs.etf.sab.tests.TestHandler;
 import rs.etf.sab.tests.TestRunner;
 
@@ -6,14 +8,14 @@ import rs.etf.sab.tests.TestRunner;
 public class StudentMain {
 
     public static void main(String[] args) {
-        CityOperations cityOperations = null; // Change this to your implementation.
-        DistrictOperations districtOperations = null; // Do it for all classes.
-        CourierOperations courierOperations = null; // e.g. = new MyDistrictOperations();
-        CourierRequestOperation courierRequestOperation = null;
-        GeneralOperations generalOperations = null;
-        UserOperations userOperations = null;
-        VehicleOperations vehicleOperations = null;
-        PackageOperations packageOperations = null;
+        CityOperations cityOperations = new db200260_CityOperations();
+        DistrictOperations districtOperations = new db200260_DistrictOperations();
+        CourierOperations courierOperations = new db200260_CourierOperations();
+        CourierRequestOperation courierRequestOperation = new db200260_CourierRequestOperations();
+        GeneralOperations generalOperations = new db200260_GeneralOperations();
+        UserOperations userOperations = new db200260_UserOperations();
+        VehicleOperations vehicleOperations = new db200260_VehicleOperations();
+        PackageOperations packageOperations = new db200260_PackageOperations();
 
         TestHandler.createInstance(
                 cityOperations,
