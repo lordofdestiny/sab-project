@@ -112,7 +112,15 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public boolean deletePackage(int packageId) {
-        return false;
+        final var connection = DB.getInstance().getConnection();
+        try(final var deletePackage = connection.prepareStatement(
+                "DELETE FROM [Package] WHERE [IdPkg] = ?"
+        )){
+            deletePackage.setInt(1, packageId );
+            return deletePackage.executeUpdate() > 0;
+        }catch (SQLException e){
+            return false;
+        }
     }
 
     @Override
