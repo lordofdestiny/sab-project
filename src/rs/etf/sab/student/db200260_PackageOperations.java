@@ -2,6 +2,7 @@ package rs.etf.sab.student;
 
 import rs.etf.sab.operations.PackageOperations;
 import rs.etf.sab.student.util.DB;
+import rs.etf.sab.student.util.Offer;
 
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -90,7 +91,23 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public List<Pair<Integer, BigDecimal>> getAllOffersForPackage(int packageId) {
-        return List.of();
+        final var connection = DB.getInstance().getConnection();
+        try (final var getOffers = connection.prepareStatement(
+                "SELECT [IdOff], [Percent] FROM [Offer] WHERE [IdPkg] = ?"
+        )) {
+            getOffers.setInt(1, packageId);
+            try (final var offerSet = getOffers.executeQuery()) {
+                final var offers = new ArrayList<Pair<Integer, BigDecimal>>();
+                while (offerSet.next()) {
+                    final var idOff = offerSet.getInt(1);
+                    final var percent = offerSet.getBigDecimal(2);
+                    offers.add(new Offer(idOff, percent));
+                }
+                return offers;
+            }
+        } catch (SQLException e) {
+            return List.of();
+        }
     }
 
     @Override
