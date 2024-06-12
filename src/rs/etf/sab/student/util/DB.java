@@ -34,12 +34,16 @@ public class DB {
 
     private final Connection connection;
 
-    private DB() throws SQLException {
-        connection = DriverManager.getConnection(connectionString, username, password);
+    private DB() {
+        try {
+            connection = DriverManager.getConnection(connectionString, username, password);
+        }catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
     private static DB instance = null;
 
-    public static DB getInstance() throws SQLException {
+    public static DB getInstance() {
         if (instance == null) {
             instance = new DB();
         }
