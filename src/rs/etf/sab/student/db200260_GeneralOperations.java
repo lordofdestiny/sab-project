@@ -9,6 +9,7 @@ import java.sql.SQLException;
 
 public class db200260_GeneralOperations implements GeneralOperations {
 
+    @SuppressWarnings({"SqlConstantCondition", "SqlConstantExpression"})
     @Override
     public void eraseAll() {
         try {
@@ -31,7 +32,6 @@ public class db200260_GeneralOperations implements GeneralOperations {
             if (e instanceof BatchUpdateException) {
                 System.out.println("One of the deletes violates referential integrity.");
             }
-            e.printStackTrace();
         }
     }
 

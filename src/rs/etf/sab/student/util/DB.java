@@ -15,6 +15,7 @@ public class DB {
             try {
                 disconnect();
             } catch (SQLException e) {
+                //noinspection CallToPrintStackTrace
                 e.printStackTrace();
             }
         }));
@@ -31,7 +32,7 @@ public class DB {
             serverName, port, database
     );
 
-    private Connection connection = null;
+    private final Connection connection;
 
     private DB() throws SQLException {
         connection = DriverManager.getConnection(connectionString, username, password);
