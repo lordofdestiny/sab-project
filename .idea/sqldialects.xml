@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/sql/create_db.sql" dialect="TSQL" />
     <file url="file://$PROJECT_DIR$/sql/db200260.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/sql/insert_enums.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/src/Playground.java" dialect="TSQL" />
+    <file url="PROJECT" dialect="TSQL" />
   </component>
 </project>
