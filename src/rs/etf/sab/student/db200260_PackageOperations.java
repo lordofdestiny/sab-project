@@ -113,12 +113,12 @@ public class db200260_PackageOperations implements PackageOperations {
     @Override
     public boolean deletePackage(int packageId) {
         final var connection = DB.getInstance().getConnection();
-        try(final var deletePackage = connection.prepareStatement(
+        try (final var deletePackage = connection.prepareStatement(
                 "DELETE FROM [Package] WHERE [IdPkg] = ?"
-        )){
-            deletePackage.setInt(1, packageId );
+        )) {
+            deletePackage.setInt(1, packageId);
             return deletePackage.executeUpdate() > 0;
-        }catch (SQLException e){
+        } catch (SQLException e) {
             return false;
         }
     }
@@ -135,7 +135,20 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public Integer getDeliveryStatus(int packageId) {
-        return 0;
+        final var connection = DB.getInstance().getConnection();
+        try (final var packageStatus = connection.prepareStatement(
+                "SELECT [DeliveryStatus] FROM [Package] WHERE [IdPkg] = ?"
+        )) {
+            packageStatus.setInt(1, packageId);
+            try (final var resultSet = packageStatus.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            return null;
+        }
     }
 
     @Override
