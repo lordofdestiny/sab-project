@@ -368,6 +368,10 @@ CREATE UNIQUE CLUSTERED INDEX [XPKVehicle] ON [Vehicle]
         )
 go
 
+ALTER TABLE [Vehicle]
+    ADD CONSTRAINT [XAK1Vehicle_Unique_LicencePlateNumber] UNIQUE ([LicencePlateNumber]  ASC)
+go
+
 CREATE NONCLUSTERED INDEX [XIF1Vehicle] ON [Vehicle]
     (
      [FuelType]            ASC
