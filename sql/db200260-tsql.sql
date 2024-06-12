@@ -106,3 +106,47 @@ BEGIN
     RETURN @errorcode
 END
 go
+
+-- Insert new Courier
+DROP PROCEDURE IF EXISTS [spInsertCourier];
+go
+
+CREATE PROCEDURE [spInsertCourier]
+    @username VARCHAR(100),
+    @licencePlateNumber VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdUser int
+    DECLARE @IdVeh int
+
+    SELECT @IdUser = [IdUser] FROM [User] WHERE [Username] = @username;
+    IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits
+
+    SELECT @IdVeh = [IdVeh] FROM [Vehicle] WHERE [LicencePlateNumber] = @licencePlateNumber;
+    IF @@ROWCOUNT = 0 RETURN 2; -- Verify that vehicle exists
+
+    DECLARE @errorcode int
+    SET @errorcode = 0
+    BEGIN TRY
+        -- Insert user as courier
+        INSERT INTO [Courier](IdUser, IdVeh) VALUES(@IdUser, @IdVeh)
+        IF @@ROWCOUNT != 1 SET @errorcode = 3 -- Verify that the user was inserted
+
+        -- Delete request in it existed before
+        DELETE FROM [CourierRequest] WHERE [IdUser] = @IdUser
+    END TRY
+    BEGIN CATCH
+        SET @errorcode = 4
+    END CATCH
+
+    IF @errorcode != 0
+    BEGIN
+        ROLLBACK TRANSACTION;
+    END
+
+    RETURN @errorcode
+END
+go
+
