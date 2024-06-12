@@ -20,8 +20,8 @@ go
 CREATE TABLE [City]
 (
     [IdCity]             integer  IDENTITY ( 1,1 )  NOT NULL ,
-    [PostalCode]         varchar(100)  NOT NULL ,
-    [Name]               varchar(100)  NOT NULL
+    [Name]               varchar(100)  NOT NULL ,
+    [PostalCode]         varchar(100)  NOT NULL
 )
 go
 
@@ -30,6 +30,7 @@ CREATE TABLE [Courier]
     [IdUser]             integer  NOT NULL
         CONSTRAINT [DF_Zero_573303825]
             DEFAULT  0,
+    [IdVeh]              integer  NOT NULL ,
     [DeliveredPackages]  integer  NOT NULL
         CONSTRAINT [DF_Zero_892127923]
             DEFAULT  0
@@ -42,8 +43,7 @@ CREATE TABLE [Courier]
             CHECK  ( TotalProfit >= 0 ),
     [Status]             [CourierStatus]
         CONSTRAINT [DF_Zero_287304439]
-            DEFAULT  0,
-    [IdVeh]              integer  NOT NULL
+            DEFAULT  0
 )
 go
 
@@ -80,13 +80,12 @@ go
 
 CREATE TABLE [Offer]
 (
+    [IdOff]              integer  IDENTITY ( 1,1 )  NOT NULL ,
+    [IdUser]             integer  NOT NULL ,
     [IdPkg]              integer  NOT NULL
         CONSTRAINT [GreaterThanZero_659841506]
             CHECK  ( IdPkg > 0 ),
-    [IdUser]             integer  NOT NULL ,
-    [PercentOffer]       char(18)  NOT NULL
-        CONSTRAINT [CK_GreaterThanOrEqualToZero_957770346]
-            CHECK  ( PercentOffer >= 0 )
+    [Percent]            [MyDecimal]
 )
 go
 
@@ -96,10 +95,10 @@ CREATE TABLE [Package]
     [IdDistFrom]         integer  NOT NULL ,
     [IdDistTo]           integer  NOT NULL ,
     [IdSender]           integer  NOT NULL ,
+    [PackageType]        integer  NOT NULL ,
     [Weight]             [MyDecimal]  NOT NULL
         CONSTRAINT [GreaterThanZero_1682187296]
             CHECK  ( Weight > 0 ),
-    [PackageType]        integer  NOT NULL ,
     [DeliveryStatus]     [DeliveryStatus]
         CONSTRAINT [DF_Zero_1095575363]
             DEFAULT  0,
@@ -168,11 +167,11 @@ go
 CREATE TABLE [Vehicle]
 (
     [IdVeh]              integer  IDENTITY ( 1,1 )  NOT NULL ,
+    [LicencePlateNumber] varchar(100)  NOT NULL ,
+    [FuelType]           integer  NOT NULL ,
     [FuelConsumption]    [MyDecimal]  NOT NULL
         CONSTRAINT [GreaterThanZero_1800700368]
-            CHECK  ( FuelConsumption > 0 ),
-    [LicencePlateNumber] varchar(100)  NOT NULL ,
-    [FuelType]           integer  NOT NULL
+            CHECK  ( FuelConsumption > 0 )
 )
 go
 
@@ -262,9 +261,12 @@ go
 
 CREATE UNIQUE CLUSTERED INDEX [XPKOffer] ON [Offer]
     (
-     [IdPkg]               ASC,
-     [IdUser]              ASC
+     [IdOff]               ASC
         )
+go
+
+ALTER TABLE [Offer]
+    ADD CONSTRAINT [XAK1Offer_UniqueUserAndPkg] UNIQUE ([IdPkg]  ASC,[IdUser]  ASC)
 go
 
 CREATE NONCLUSTERED INDEX [XIF1Offer] ON [Offer]
