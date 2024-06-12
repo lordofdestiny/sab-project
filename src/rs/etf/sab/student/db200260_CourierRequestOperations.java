@@ -39,7 +39,19 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
 
     @Override
     public boolean changeVehicleInCourierRequest(String userName, String licencePlateNumber) {
-        return false;
+        final var connection = DB.getInstance().getConnection();
+        try (final var insertRequest = connection.prepareCall(
+                "{? = call [spChangeVehicleInCourierRequest](?, ?)}"
+        )) {
+            insertRequest.registerOutParameter(1, Types.INTEGER);
+            insertRequest.setString("username", userName);
+            insertRequest.setString("licencePlateNumber", licencePlateNumber);
+            insertRequest.execute();
+
+            return insertRequest.getInt(1) == 0;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     @Override
