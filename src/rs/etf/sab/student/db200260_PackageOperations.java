@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.List;
 
 public class db200260_PackageOperations implements PackageOperations {
@@ -42,7 +43,25 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public int insertTransportOffer(String couriersUserName, int packageId, BigDecimal pricePercentage) {
-        return 0;
+        final var connection = DB.getInstance().getConnection();
+        try (final var insertOffer = connection.prepareCall(
+                "{? = call [spInsertOffer](?, ?, ?, ?)}"
+        )) {
+            insertOffer.registerOutParameter(1, Types.INTEGER);
+            insertOffer.setString(2, couriersUserName);
+            insertOffer.setInt(3, packageId);
+            insertOffer.setBigDecimal(4, pricePercentage);
+            insertOffer.registerOutParameter(5, Types.INTEGER);
+            insertOffer.execute();
+
+            if (insertOffer.getInt(1) != 0) {
+                return -1;
+            }
+
+            return insertOffer.getInt(5);
+        } catch (SQLException e) {
+            return -1;
+        }
     }
 
     @Override

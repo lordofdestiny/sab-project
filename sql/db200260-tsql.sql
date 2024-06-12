@@ -150,3 +150,45 @@ BEGIN
 END
 go
 
+DROP PROCEDURE IF EXISTS [spInsertOffer];
+go
+
+CREATE PROCEDURE [spInsertOffer]
+    @courierUsername VARCHAR(100),
+    @IdPkg int,
+    @pricePercentage DECIMAL(10, 3),
+    @newOfferId int OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdCourier int
+    DECLARE @PkgStatus int
+
+    SELECT @IdCourier = c.[IdUser]
+    FROM [Courier] c JOIN [User] u ON (c.[IdUser] = u.[IdUser])
+    WHERE u.[Username] = @courierUsername
+    IF @@ROWCOUNT = 0 RETURN 1 -- Verify that user is a courier
+
+    SELECT @PkgStatus = DeliveryStatus FROM [Package] WHERE [IdPkg] = @IdPkg;
+    IF @@ROWCOUNT = 0 RETURN 2 -- Verify that package exists
+    IF @PkgStatus != 0 RETURN 3 -- Verify that the offer was not accepted for this package
+
+    IF @pricePercentage IS NULL
+        BEGIN
+            SELECT @pricePercentage =  CONVERT(DECIMAL(10,3), -10 + (10 - -10)*RAND(CHECKSUM(NEWID())));
+        END
+
+    BEGIN TRY
+        INSERT INTO [Offer](IdPkg, IdUser, [Percent])
+        VALUES (@IdPkg, @IdCourier, @pricePercentage)
+        SET @newOfferId = SCOPE_IDENTITY()
+    END TRY
+    BEGIN CATCH
+        RETURN 5 -- Insert failed because of duplicate keys
+    END CATCH
+
+    RETURN 0;
+END
+go
+
