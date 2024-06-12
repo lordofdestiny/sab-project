@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Initialize" type="DatabaseScript" editBeforeRun="true">
+    <script-file value="$PROJECT_DIR$/sql/create_db.sql" />
+    <script-file value="$PROJECT_DIR$/sql/db200260.sql" />
+    <script-file value="$PROJECT_DIR$/sql/insert_enums.sql" />
+    <script-mode>FILE</script-mode>
+    <data-source id="6d23258d-7d7b-4e1a-92c1-be81f2731504" namespace="database/&quot;master&quot;" />
+    <method v="2" />
+  </configuration>
+</component>
