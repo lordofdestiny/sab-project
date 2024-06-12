@@ -1,13 +1,3 @@
-IF EXISTS(
-    SELECT name FROM sys.databases WHERE name = 'PackageTransportation'
-)BEGIN
-    DROP DATABASE PackageTransportation
-END
-GO
-
-CREATE DATABASE PackageTransportation
-GO
-
 CREATE TYPE [MyDecimal]
     FROM DECIMAL(10,3) NOT NULL
 go
@@ -36,16 +26,25 @@ go
 
 CREATE TABLE [Courier]
 (
-    [IdUser]             integer  NOT NULL ,
+    [IdUser]             integer  NOT NULL
+        CONSTRAINT [DF_Zero_573303825]
+            DEFAULT  0,
     [DeliveredPackages]  integer  NOT NULL
         CONSTRAINT [DF_Zero_892127923]
             DEFAULT  0
         CONSTRAINT [CK_GreaterThanOrEqualToZero_1027783113]
             CHECK  ( DeliveredPackages >= 0 ),
-    [TotalProfit]        [MyDecimal] ,
-    [Status]             integer  NOT NULL
+    [TotalProfit]        [MyDecimal]
+        CONSTRAINT [DF_Zero_1973267804]
+            DEFAULT  0
+        CONSTRAINT [CK_GreaterThanOrEqualToZero_2108922994]
+            CHECK  ( TotalProfit >= 0 ),
+    [Status]             [CourierStatus]
+        CONSTRAINT [DF_Zero_287304439]
+            DEFAULT  0
         CONSTRAINT [CK_Courier_Status_253687243]
-            CHECK  ( [Status]=0 OR [Status]=1 )
+            CHECK  ( [Status]=0 OR [Status]=1 ),
+    [IdVeh]              integer  NOT NULL
 )
 go
 
@@ -61,14 +60,8 @@ CREATE TABLE [District]
     [IdDist]             integer  IDENTITY ( 1,1 )  NOT NULL ,
     [IdCity]             integer  NOT NULL ,
     [CoordinateX]        [MyDecimal]  NOT NULL ,
-    [CoordinateY]        [MyDecimal]  NOT NULL
-)
-go
-
-CREATE TABLE [Drives]
-(
-    [IdUser]             integer  NOT NULL ,
-    [IdVeh]              integer  NULL
+    [CoordinateY]        [MyDecimal]  NOT NULL ,
+    [Name]               varchar(100)  NOT NULL
 )
 go
 
@@ -77,16 +70,20 @@ CREATE TABLE [FuelType]
     [IdFuelT]            integer  NOT NULL ,
     [Description]        varchar(100)  NOT NULL ,
     [FuelPrice]          [MyDecimal]  NOT NULL
-        CONSTRAINT [CK_GreaterThanOrEqualToZero_378900903]
-            CHECK  ( FuelPrice >= 0 )
+        CONSTRAINT [GreaterThanZero_1486860202]
+            CHECK  ( FuelPrice > 0 )
 )
 go
 
 CREATE TABLE [Offer]
 (
-    [IdPkg]              integer  NOT NULL ,
+    [IdPkg]              integer  NOT NULL
+        CONSTRAINT [GreaterThanZero_659841506]
+            CHECK  ( IdPkg > 0 ),
     [IdUser]             integer  NOT NULL ,
-    [Percent]            char(18)  NOT NULL
+    [PercentOffer]       char(18)  NOT NULL
+        CONSTRAINT [CK_GreaterThanOrEqualToZero_957770346]
+            CHECK  ( PercentOffer >= 0 )
 )
 go
 
@@ -96,7 +93,9 @@ CREATE TABLE [Package]
     [IdDistFrom]         integer  NOT NULL ,
     [IdDistTo]           integer  NOT NULL ,
     [IdSender]           integer  NOT NULL ,
-    [Weight]             [MyDecimal]  NOT NULL ,
+    [Weight]             [MyDecimal]  NOT NULL
+        CONSTRAINT [GreaterThanZero_1682187296]
+            CHECK  ( Weight > 0 ),
     [PackageType]        integer  NOT NULL ,
     [DeliveryStatus]     [DeliveryStatus]
         CONSTRAINT [DF_Zero_1095575363]
@@ -104,9 +103,11 @@ CREATE TABLE [Package]
     [IdCourier]          integer  NULL
         CONSTRAINT [DF_NULL_350091192]
             DEFAULT  NULL,
-    [Price]              [MyDecimal]
+    [Price]              [MyDecimal]  NULL
         CONSTRAINT [DF_NULL_1874707671]
-            DEFAULT  NULL,
+            DEFAULT  NULL
+        CONSTRAINT [GreaterThanZero_833478113]
+            CHECK  ( Price > 0 ),
     [TimeAccepted]       datetime  NULL
         CONSTRAINT [DF_NULL_1175160234]
             DEFAULT  NULL
@@ -132,6 +133,10 @@ CREATE TABLE [Ride]
     [IdRide]             integer  IDENTITY ( 1,1 )  NOT NULL ,
     [IdUser]             integer  NOT NULL ,
     [Profit]             [MyDecimal]
+        CONSTRAINT [DF_Zero_1434614566]
+            DEFAULT  0
+        CONSTRAINT [CK_GreaterThanOrEqualToZero_1570269756]
+            CHECK  ( Profit >= 0 )
 )
 go
 
@@ -150,6 +155,8 @@ CREATE TABLE [User]
     [Username]           varchar(100)  NOT NULL ,
     [Password]           varchar(100)  NOT NULL ,
     [SentPackages]       integer  NOT NULL
+        CONSTRAINT [DF_Zero_537156203]
+            DEFAULT  0
         CONSTRAINT [CK_GreaterThanOrEqualToZero_401501013]
             CHECK  ( SentPackages >= 0 )
 )
@@ -159,8 +166,8 @@ CREATE TABLE [Vehicle]
 (
     [IdVeh]              integer  IDENTITY ( 1,1 )  NOT NULL ,
     [FuelConsumption]    [MyDecimal]  NOT NULL
-        CONSTRAINT [CK_GreaterThanOrEqualToZero_692741069]
-            CHECK  ( FuelConsumption >= 0 ),
+        CONSTRAINT [GreaterThanZero_1800700368]
+            CHECK  ( FuelConsumption > 0 ),
     [LicencePlateNumber] varchar(100)  NOT NULL ,
     [FuelType]           integer  NOT NULL
 )
@@ -194,9 +201,19 @@ CREATE UNIQUE CLUSTERED INDEX [XPKCourier] ON [Courier]
         )
 go
 
+ALTER TABLE [Courier]
+    ADD CONSTRAINT [XAK1Courier_IdVeh] UNIQUE ([IdVeh]  ASC)
+go
+
 CREATE UNIQUE NONCLUSTERED INDEX [XIF1Courier] ON [Courier]
     (
      [IdUser]              ASC
+        )
+go
+
+CREATE NONCLUSTERED INDEX [XIF2Courier] ON [Courier]
+    (
+     [IdVeh]               ASC
         )
 go
 
@@ -227,24 +244,6 @@ go
 CREATE NONCLUSTERED INDEX [XIF1District] ON [District]
     (
      [IdCity]              ASC
-        )
-go
-
-CREATE UNIQUE CLUSTERED INDEX [XPKDrives] ON [Drives]
-    (
-     [IdUser]              ASC
-        )
-go
-
-CREATE UNIQUE NONCLUSTERED INDEX [XIF1Drives] ON [Drives]
-    (
-     [IdUser]              ASC
-        )
-go
-
-CREATE NONCLUSTERED INDEX [XIF2Drives] ON [Drives]
-    (
-     [IdVeh]               ASC
         )
 go
 
@@ -382,6 +381,12 @@ ALTER TABLE [Courier]
         ON UPDATE CASCADE
 go
 
+ALTER TABLE [Courier]
+    ADD CONSTRAINT [R_28] FOREIGN KEY ([IdVeh]) REFERENCES [Vehicle]([IdVeh])
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION
+go
+
 
 ALTER TABLE [CourierRequest]
     ADD CONSTRAINT [R_4] FOREIGN KEY ([IdUser]) REFERENCES [User]([IdUser])
@@ -399,19 +404,6 @@ go
 ALTER TABLE [District]
     ADD CONSTRAINT [R_1] FOREIGN KEY ([IdCity]) REFERENCES [City]([IdCity])
         ON DELETE NO ACTION
-        ON UPDATE CASCADE
-go
-
-
-ALTER TABLE [Drives]
-    ADD CONSTRAINT [R_26] FOREIGN KEY ([IdUser]) REFERENCES [Courier]([IdUser])
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-go
-
-ALTER TABLE [Drives]
-    ADD CONSTRAINT [R_27] FOREIGN KEY ([IdVeh]) REFERENCES [Vehicle]([IdVeh])
-        ON DELETE CASCADE
         ON UPDATE CASCADE
 go
 
