@@ -5,7 +5,6 @@
     <file url="file://$PROJECT_DIR$/sql/db200260-tsql.sql" dialect="TSQL" />
     <file url="file://$PROJECT_DIR$/sql/db200260.sql" dialect="TSQL" />
     <file url="file://$PROJECT_DIR$/sql/insert_enums.sql" dialect="TSQL" />
-    <file url="file://$PROJECT_DIR$/src/Playground.java" dialect="TSQL" />
     <file url="PROJECT" dialect="TSQL" />
   </component>
 </project>
