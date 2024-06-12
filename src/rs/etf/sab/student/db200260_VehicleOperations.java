@@ -52,7 +52,7 @@ public class db200260_VehicleOperations implements rs.etf.sab.operations.Vehicle
              )) {
             final var vehicles = new ArrayList<String>();
             while (resultSet.next()){
-                vehicles.add(resultSet.getNString(1));
+                vehicles.add(resultSet.getString(1));
             }
             return vehicles;
         } catch (SQLException e) {

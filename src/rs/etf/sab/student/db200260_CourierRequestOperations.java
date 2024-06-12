@@ -65,7 +65,7 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
         ){
             final var usernames = new ArrayList<String>();
             while (courierRequests.next()){
-                usernames.add(courierRequests.getNString(1));
+                usernames.add(courierRequests.getString(1));
             }
             return usernames;
         }catch (SQLException e){
