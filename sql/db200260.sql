@@ -1,3 +1,4 @@
+
 CREATE TYPE [MyDecimal]
     FROM DECIMAL(10,3) NOT NULL
 go
@@ -41,11 +42,13 @@ CREATE TABLE [Courier]
             CHECK  ( TotalProfit >= 0 ),
     [Status]             [CourierStatus]
         CONSTRAINT [DF_Zero_287304439]
-            DEFAULT  0
-        CONSTRAINT [CK_Courier_Status_253687243]
-            CHECK  ( [Status]=0 OR [Status]=1 ),
+            DEFAULT  0,
     [IdVeh]              integer  NOT NULL
 )
+go
+
+ALTER TABLE [Courier]
+    WITH CHECK ADD CONSTRAINT [CK_Courier_Status_253687243] CHECK  ( [Status]=0 OR [Status]=1 )
 go
 
 CREATE TABLE [CourierRequest]
@@ -189,6 +192,10 @@ CREATE UNIQUE CLUSTERED INDEX [XPKCity] ON [City]
     (
      [IdCity]              ASC
         )
+go
+
+ALTER TABLE [City]
+    ADD CONSTRAINT [XAK_City_Name] UNIQUE ([Name]  ASC)
 go
 
 ALTER TABLE [City]
