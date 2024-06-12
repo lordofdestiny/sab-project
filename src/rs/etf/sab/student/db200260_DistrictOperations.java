@@ -3,6 +3,7 @@ package rs.etf.sab.student;
 import rs.etf.sab.student.util.DB;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -89,7 +90,7 @@ public class db200260_DistrictOperations implements rs.etf.sab.operations.Distri
         ) {
             ps.setInt(1, idCity);
             try (final var rs = ps.executeQuery()) {
-                final var districts = new java.util.ArrayList<Integer>();
+                final var districts = new ArrayList<Integer>();
                 while (rs.next()) {
                     districts.add(rs.getInt(1));
                 }

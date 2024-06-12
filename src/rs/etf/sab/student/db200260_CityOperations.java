@@ -5,6 +5,7 @@ import rs.etf.sab.student.util.DB;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,9 +36,9 @@ public class db200260_CityOperations implements CityOperations {
 
     @Override
     public int deleteCity(String... names) {
-        final var deleteQuery = "DELETE FROM [City] WHERE [Name] = ?";
         final var connection = DB.getInstance().getConnection();
-        try (final var ps = connection.prepareStatement(deleteQuery)) {
+        try (final var ps = connection.prepareStatement("DELETE FROM [City] WHERE [Name] = ?")) {
+            // noinspection Duplicates
             for (var name : names) {
                 ps.setString(1, name);
                 ps.addBatch();
@@ -65,7 +66,7 @@ public class db200260_CityOperations implements CityOperations {
         final var connection = DB.getInstance().getConnection();
         try (final var stmt = connection.createStatement();
              final var rs = stmt.executeQuery("SELECT [IdCity] FROM [City]")) {
-            final var cities = new java.util.ArrayList<Integer>();
+            final var cities = new ArrayList<Integer>();
             while (rs.next()) {
                 cities.add(rs.getInt(1));
             }
