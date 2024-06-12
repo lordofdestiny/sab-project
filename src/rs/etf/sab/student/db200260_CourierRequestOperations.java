@@ -20,14 +20,21 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
 
             return insertRequest.getInt(1) == 0;
         } catch (SQLException e) {
-            e.printStackTrace();
             return false;
         }
     }
 
     @Override
     public boolean deleteCourierRequest(String userName) {
-        return false;
+        final var connection = DB.getInstance().getConnection();
+        try (final var deleteCourier = connection.prepareStatement(
+                "DELETE FROM [CourierRequest] WHERE [IdUser] = (SELECT [IdUser] FROM [User] WHERE [Username] = ?)"
+        )) {
+            deleteCourier.setString(1, userName);
+            return deleteCourier.executeUpdate() > 0;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     @Override
