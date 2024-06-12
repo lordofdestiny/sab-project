@@ -153,7 +153,23 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public BigDecimal getPriceOfDelivery(int packageId) {
-        return null;
+        final var connection = DB.getInstance().getConnection();
+        try (final var packageStatus = connection.prepareStatement(
+                "SELECT [Price] FROM [Package] WHERE [IdPkg] = ?"
+        )) {
+            packageStatus.setInt(1, packageId);
+            try (final var resultSet = packageStatus.executeQuery()) {
+                if (resultSet.next()) {
+                    // This also correctly handles the case
+                    // when price was not yet calculated
+                    // and the field is NULL
+                    return resultSet.getBigDecimal(1);
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            return null;
+        }
     }
 
     @Override
