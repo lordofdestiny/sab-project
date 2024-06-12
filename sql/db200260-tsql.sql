@@ -17,6 +17,9 @@ BEGIN
     SELECT @IdVeh = [IdVeh] FROM [Vehicle] WHERE [LicencePlateNumber] = @licencePlateNumber;
     IF @@ROWCOUNT = 0 RETURN 2; -- Verify that vehicle exists
 
+    -- Verify that user is not already a courier
+    IF EXISTS (SELECT [IdUser] FROM [Courier] WHERE [IdUser] = @IdUser) RETURN 3;
+
     -- Verify that vehicle is not already used, before creating the request
     IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh) RETURN 3;
 
@@ -25,7 +28,7 @@ BEGIN
         INSERT INTO [CourierRequest](IdUser, IdVeh) VALUES (@IdUser, @IdVeh)
     END TRY
     BEGIN CATCH
-        RETURN 4;
+        RETURN 5;
     END CATCH
 
     RETURN 0;
@@ -46,7 +49,7 @@ BEGIN
     DECLARE @IdUser int, @IdVeh int
 
     SELECT @IdUser = [IdUser] FROM [User] WHERE [Username] = @username;
-    IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits
+    IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits and has a request
 
     SELECT @IdVeh = [IdVeh] FROM [Vehicle] WHERE [LicencePlateNumber] = @licencePlateNumber;
     IF @@ROWCOUNT = 0 RETURN 2; -- Verify that vehicle exists
@@ -54,9 +57,8 @@ BEGIN
     -- Verify that vehicle is not already used, before creating the request
     IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh) RETURN 3;
 
-    UPDATE [CourierRequest]
-    SET [IdVeh] = @IdVeh
-    WHERE [IdUser] = @IdUser
+    UPDATE [CourierRequest] SET [IdVeh] = @IdVeh WHERE [IdUser] = @IdUser
+    IF @@ROWCOUNT = 0 RETURN 4; -- Verify that the request was updated, ie. the user had a request
 
     RETURN 0;
 END
