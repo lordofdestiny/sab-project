@@ -14,8 +14,7 @@ public class db200260_GeneralOperations implements GeneralOperations {
     public void eraseAll() {
         Connection conn = DB.getInstance().getConnection();
         try (final var stmt = conn.createStatement()) {
-            stmt.addBatch("DELETE FROM [RidePackages] WHERE 1 = 1");
-            stmt.addBatch("DELETE FROM [Ride] WHERE 1 = 1");
+            stmt.addBatch("DELETE FROM [Drive] WHERE 1 = 1");
             stmt.addBatch("DELETE FROM [CourierRequest]  WHERE 1 = 1");
             stmt.addBatch("DELETE FROM [Offer] WHERE 1 = 1");
             stmt.addBatch("DELETE FROM [Package] WHERE 1 = 1");
