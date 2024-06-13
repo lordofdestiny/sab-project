@@ -194,3 +194,45 @@ BEGIN
 END
 go
 
+-- Function to calculate the price for the package
+DROP FUNCTION IF EXISTS [fDeliveryPrice];
+GO
+
+CREATE FUNCTION [fDeliveryPrice](
+    @IdPkg int
+)
+    RETURNS DECIMAL(10, 3)
+BEGIN
+    DECLARE @fromDistX DECIMAL(10, 3)
+    DECLARE @fromDistY DECIMAL(10, 3)
+    DECLARE @toDistX DECIMAL(10, 3)
+    DECLARE @toDistY DECIMAL (10, 3)
+    DECLARE @weight DECIMAL(10, 3)
+    DECLARE @basePrice DECIMAL(10, 3)
+    DECLARE @pricePerKg DECIMAL(10, 3)
+    DECLARE @weightFactor DECIMAL(10, 3)
+
+    SELECT
+        @fromDistX = dFrom.[CoordinateX],
+        @fromDistY = dFrom.[CoordinateY],
+        @toDistX = dTo.[CoordinateX],
+        @toDistY = dTo.[CoordinateX],
+        @weight = p.[Weight],
+        @basePrice = pt.InitialPrice,
+        @pricePerKg = pt.PricePerKg,
+        @weightFactor = pt.WeightFactor
+    FROM [Package] p
+             JOIN [District] dFrom ON (p.[IdDistFrom] = dFrom.[IdDist])
+             JOIN [District] dTo ON (p.[IdDistTo] = dTo.[IdDist])
+             JOIN [PackageType] pt ON (p.[PackageType] = pt.IdPkgT)
+    WHERE p.[IdPkg] = @IdPkg
+
+    -- Calculate euclidean distance
+    DECLARE @distance DECIMAL(10, 3)
+    SET @distance = SQRT(SQUARE(@fromDistX - @toDistX) + SQUARE(@fromDistY - @toDistY))
+
+    RETURN (@basePrice + (@weightFactor * @weight) * @pricePerKg) * @distance
+END
+GO
+
+-- Select package courier from offer
