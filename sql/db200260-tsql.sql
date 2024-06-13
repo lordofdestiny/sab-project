@@ -216,7 +216,7 @@ BEGIN
         @fromDistX = dFrom.[CoordinateX],
         @fromDistY = dFrom.[CoordinateY],
         @toDistX = dTo.[CoordinateX],
-        @toDistY = dTo.[CoordinateX],
+        @toDistY = dTo.[CoordinateY],
         @weight = p.[Weight],
         @basePrice = pt.InitialPrice,
         @pricePerKg = pt.PricePerKg,
@@ -267,15 +267,14 @@ DROP TRIGGER IF EXISTS [TR_TransportOffer_Confirm]
 GO
 
 CREATE TRIGGER [TR_TransportOffer_Confirm]
-    ON  [Package]
-    AFTER UPDATE
-    AS
+ON  [Package]
+AFTER UPDATE
+AS
 BEGIN
     SET NOCOUNT ON;
 
     IF EXISTS(
-        SELECT *
-        FROM INSERTED I JOIN DELETED D ON (I.IdPkg = D.IdPkg)
+        SELECT * FROM INSERTED I JOIN DELETED D ON (I.IdPkg = D.IdPkg)
         WHERE
                 I.[IdSender] != D.[IdSender] -- Cannot change sender
            OR	I.[DeliveryStatus] < D.[DeliveryStatus] -- Cannot go to previous states
@@ -284,20 +283,20 @@ BEGIN
                 I.[IdDistFrom] != D.[IdDistTo] OR -- Cannot change origin district
                 I.[IdDistTo] != D.[IdDistTo] OR -- cannot change destination district
                 I.[Weight] != D.[Weight] OR -- cannot change weight
-                i.[IdCourier] IS NULL OR -- cannot unset courier
+                I.[IdCourier] IS NULL OR -- cannot unset courier
                 I.[IdCourier] != D.[IdCourier] -- cannot change courier
             ))
     )
-        BEGIN
-            ROLLBACK TRANSACTION
-            RAISERROR ('Invalid column update for current package state', 10, 1);
-            RETURN
-        END
+    BEGIN
+        ROLLBACK TRANSACTION
+        RAISERROR ('Invalid column update for current package state', 10, 1);
+        RETURN
+    END
 
-    DECLARE cursorConfirmedPacakges CURSOR FOR
-        SELECT I.[IdPkg], I.[IdCourier], D.[IdCourier]
-        FROM INSERTED I JOIN DELETED D ON (I.IdPkg = D.IdPkg)
-        WHERE I.[IdCourier] IS NOT NULL AND D.[IdCourier] IS NULL
+    DECLARE cursorConfirmedPacakges CURSOR LOCAL FOR
+    SELECT I.[IdPkg], I.[IdCourier], D.[IdCourier]
+    FROM INSERTED I JOIN DELETED D ON (I.IdPkg = D.IdPkg)
+    WHERE I.[IdCourier] IS NOT NULL AND D.[IdCourier] IS NULL
 
     DECLARE @IdPkg int
     DECLARE @IdCourierOld int
@@ -306,40 +305,37 @@ BEGIN
     OPEN cursorConfirmedPacakges
 
     FETCH NEXT FROM cursorConfirmedPacakges
-        INTO @IdPkg, @IdCourierOld, @IdCourierNew
+    INTO @IdPkg, @IdCourierNew, @IdCourierOld
 
     WHILE @@FETCH_STATUS = 0
-        BEGIN
-            DECLARE @priceFactor DECIMAL(10, 3)
-            SELECT @priceFactor = (1 + [Percent] / 100) FROM [Offer]
-            WHERE [IdUser] = @IdCourierNew AND [IdPkg] = @IdPkg
-            IF @@ROWCOUNT = 0 -- Verify that offer existed for this Courier
-                BEGIN
-                    ROLLBACK TRANSACTION;
-                    RAISERROR('Attempted to accept non-existent offer', 10, 2)
-                    RETURN
-                END
-
-            -- now update the status, price and time
-            UPDATE [Package]
-            SET
-                [DeliveryStatus] = 1,
-                [Price] = [dbo].[fDeliveryPrice](@IdPkg) * @priceFactor,
-                [TimeAccepted] = GETDATE()
-            WHERE [IdPkg] = @IdPkg
-            IF @@ROWCOUNT = 0 -- Update failed for unknown reason
-                BEGIN
-                    ROLLBACK TRANSACTION
-                    RAISERROR ('Failed to set package price and date', 10, 3);
-                    RETURN
-                END
-
-            -- and delete all offers for that package
-            DELETE FROM [Offer] WHERE [IdPkg] = @IdPkg
-
-            FETCH NEXT FROM cursorConfirmedPacakges
-                INTO @IdPkg, @IdCourierOld, @IdCourierNew
-        END
+    BEGIN
+        DECLARE @priceFactor DECIMAL(10, 3)
+        SELECT @priceFactor = (1 + [Percent] / 100) FROM [Offer]
+        WHERE [IdUser] = @IdCourierNew AND [IdPkg] = @IdPkg
+        IF @@ROWCOUNT = 0 -- Verify that offer existed for this Courier
+            BEGIN
+                ROLLBACK TRANSACTION;
+                RAISERROR('Attempted to accept non-existent offer', 10, 2)
+                BREAK
+            END
+        -- now update the status, price and time
+        UPDATE [Package]
+        SET
+            [DeliveryStatus] = 1,
+            [Price] = [dbo].[fDeliveryPrice](@IdPkg) * @priceFactor,
+            [TimeAccepted] = GETDATE()
+        WHERE [IdPkg] = @IdPkg
+        IF @@ROWCOUNT = 0 -- Update failed for unknown reason
+            BEGIN
+                ROLLBACK TRANSACTION
+                RAISERROR ('Failed to set package price and date', 10, 3);
+                BREAK
+            END
+        -- and delete all offers for that package
+        DELETE FROM [Offer] WHERE [IdPkg] = @IdPkg
+        FETCH NEXT FROM cursorConfirmedPacakges
+            INTO @IdPkg, @IdCourierNew, @IdCourierOld
+    END
 
     CLOSE cursorConfirmedPacakges
     DEALLOCATE cursorConfirmedPacakges
