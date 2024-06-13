@@ -163,21 +163,26 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @IdCourier int
+    DECLARE @CourierStatus int
     DECLARE @PkgStatus int
 
-    SELECT @IdCourier = c.[IdUser]
+    SELECT @IdCourier = c.[IdUser], @CourierStatus = [Status]
     FROM [Courier] c JOIN [User] u ON (c.[IdUser] = u.[IdUser])
     WHERE u.[Username] = @courierUsername
     IF @@ROWCOUNT = 0 RETURN 1 -- Verify that user is a courier
+    IF @CourierStatus != 0 RETURN 2 -- Verify that the courier is not driving
 
     SELECT @PkgStatus = DeliveryStatus FROM [Package] WHERE [IdPkg] = @IdPkg;
-    IF @@ROWCOUNT = 0 RETURN 2 -- Verify that package exists
-    IF @PkgStatus != 0 RETURN 3 -- Verify that the offer was not accepted for this package
+    IF @@ROWCOUNT = 0 RETURN 3 -- Verify that package exists
+    IF @PkgStatus != 0 RETURN 4 -- Verify that the offer was not accepted for this package
 
     IF @pricePercentage IS NULL
         BEGIN
             SELECT @pricePercentage =  CONVERT(DECIMAL(10,3), -10 + (10 - -10)*RAND(CHECKSUM(NEWID())));
         END
+    BEGIN
+        SELECT @pricePercentage =  CONVERT(DECIMAL(10,3), -10 + (10 - -10)*RAND(CHECKSUM(NEWID())));
+    END
 
     BEGIN TRY
         INSERT INTO [Offer](IdPkg, IdUser, [Percent])
