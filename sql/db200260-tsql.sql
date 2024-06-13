@@ -177,9 +177,6 @@ BEGIN
     IF @PkgStatus != 0 RETURN 4 -- Verify that the offer was not accepted for this package
 
     IF @pricePercentage IS NULL
-        BEGIN
-            SELECT @pricePercentage =  CONVERT(DECIMAL(10,3), -10 + (10 - -10)*RAND(CHECKSUM(NEWID())));
-        END
     BEGIN
         SELECT @pricePercentage =  CONVERT(DECIMAL(10,3), -10 + (10 - -10)*RAND(CHECKSUM(NEWID())));
     END
