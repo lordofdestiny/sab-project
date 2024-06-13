@@ -125,7 +125,7 @@ public class db200260_PackageOperations implements PackageOperations {
     public boolean deletePackage(int packageId) {
         final var connection = DB.getInstance().getConnection();
         try (final var deletePackage = connection.prepareStatement(
-                "DELETE FROM [Package] WHERE [IdPkg] = ?"
+                "DELETE FROM [Package] WHERE [IdPkg] = ? AND [DeliveryStatus] IN (0, 1)"
         )) {
             deletePackage.setInt(1, packageId);
             return deletePackage.executeUpdate() > 0;
