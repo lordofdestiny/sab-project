@@ -72,7 +72,7 @@ public class db200260_PackageOperations implements PackageOperations {
         try (final var acceptOffer = connection.prepareCall(
                 "{? = call [spAcceptOffer](?)}"
         )) {
-            acceptOffer.registerOutParameter(1,Types.INTEGER);
+            acceptOffer.registerOutParameter(1, Types.INTEGER);
             acceptOffer.setInt(2, offerId);
             acceptOffer.execute();
 
@@ -137,14 +137,14 @@ public class db200260_PackageOperations implements PackageOperations {
     @Override
     public boolean changeWeight(int packageId, BigDecimal newWeight) {
         final var connection = DB.getInstance().getConnection();
-        try(final var changeWeight = connection.prepareStatement(
+        try (final var changeWeight = connection.prepareStatement(
                 "UPDATE [Package] SET [Weight] = ? WHERE [IdPkg] = ? AND [DeliveryStatus] = 0"
-        )){
+        )) {
             changeWeight.setBigDecimal(1, newWeight);
             changeWeight.setInt(2, packageId);
 
             return changeWeight.executeUpdate() > 0;
-        }catch (SQLException e){
+        } catch (SQLException e) {
             return false;
         }
     }
@@ -152,14 +152,14 @@ public class db200260_PackageOperations implements PackageOperations {
     @Override
     public boolean changeType(int packageId, int newType) {
         final var connection = DB.getInstance().getConnection();
-        try(final var changeType = connection.prepareStatement(
+        try (final var changeType = connection.prepareStatement(
                 "UPDATE [Package] SET [PackageType] = ? WHERE [IdPkg] = ? AND [DeliveryStatus] = 0"
-        )){
+        )) {
             changeType.setInt(1, newType);
-            changeType.setInt(2,packageId);
+            changeType.setInt(2, packageId);
 
             return changeType.executeUpdate() > 0;
-        }catch (SQLException e){
+        } catch (SQLException e) {
             return false;
         }
     }
@@ -264,7 +264,22 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public List<Integer> getDrive(String courierUsername) {
-        return List.of();
+        final var connection = DB.getInstance().getConnection();
+        try (final var getDrive = connection.prepareStatement(
+                "SELECT [IdPkg] FROM [Drive]" +
+                        "WHERE [IdUser] = (SELECT [IdUser] FROM dbo.[User] WHERE [Username] = ?)"
+        )) {
+            getDrive.setString(1, courierUsername);
+            try(final var packageSet = getDrive.executeQuery()){
+                final var packages = new ArrayList<Integer>();
+                while (packageSet.next()){
+                    packages.add(packageSet.getInt(1));
+                }
+                return packages;
+            }
+        } catch (SQLException e) {
+            return List.of();
+        }
     }
 
     @Override
