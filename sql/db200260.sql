@@ -247,6 +247,10 @@ CREATE UNIQUE CLUSTERED INDEX [XPKDistrict] ON [District]
         )
 go
 
+ALTER TABLE [District]
+    ADD CONSTRAINT [XAK1District_UniqueNameInCity] UNIQUE ([IdCity]  ASC,[Name]  ASC)
+go
+
 CREATE NONCLUSTERED INDEX [XIF1District] ON [District]
     (
      [IdCity]              ASC
