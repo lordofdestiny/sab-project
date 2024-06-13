@@ -280,12 +280,12 @@ BEGIN
            OR	I.[DeliveryStatus] < D.[DeliveryStatus] -- Cannot go to previous states
            OR	(D.[DeliveryStatus] > 0 AND ( -- If was accepted
                 I.[PackageType] != D.[PackageType] OR -- Cannot change type
-                I.[IdDistFrom] != D.[IdDistTo] OR -- Cannot change origin district
+                I.[IdDistFrom] != D.[IdDistFrom] OR -- Cannot change origin district
                 I.[IdDistTo] != D.[IdDistTo] OR -- cannot change destination district
                 I.[Weight] != D.[Weight] OR -- cannot change weight
                 I.[IdCourier] IS NULL OR -- cannot unset courier
                 I.[IdCourier] != D.[IdCourier] -- cannot change courier
-            ))
+           ))
     )
     BEGIN
         ROLLBACK TRANSACTION
@@ -328,7 +328,7 @@ BEGIN
         IF @@ROWCOUNT = 0 -- Update failed for unknown reason
             BEGIN
                 ROLLBACK TRANSACTION
-                RAISERROR ('Failed to set package price and date', 10, 3);
+                RAISERROR ('Failed to set package status, price and date', 10, 3);
                 BREAK
             END
         -- and delete all offers for that package
