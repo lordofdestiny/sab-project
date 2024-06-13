@@ -68,7 +68,18 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public boolean acceptAnOffer(int offerId) {
-        return false;
+        final var connection = DB.getInstance().getConnection();
+        try (final var acceptOffer = connection.prepareCall(
+                "{? = call [spAcceptOffer](?)}"
+        )) {
+            acceptOffer.registerOutParameter(1,Types.INTEGER);
+            acceptOffer.setInt(2, offerId);
+            acceptOffer.execute();
+
+            return acceptOffer.getInt(1) == 0;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     @Override
