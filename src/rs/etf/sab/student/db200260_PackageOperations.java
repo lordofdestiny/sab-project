@@ -249,7 +249,7 @@ public class db200260_PackageOperations implements PackageOperations {
         final var connection = DB.getInstance().getConnection();
         try (final var getPackages = connection.createStatement();
              final var packageSet = getPackages.executeQuery(
-                     "SELECT [IdPkg] FROM [Package] WHERE [PackageType] = ?"
+                     "SELECT [IdPkg] FROM [Package]"
              )
         ) {
             final var packages = new ArrayList<Integer>();
