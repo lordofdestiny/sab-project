@@ -136,12 +136,32 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public boolean changeWeight(int packageId, BigDecimal newWeight) {
-        return false;
+        final var connection = DB.getInstance().getConnection();
+        try(final var changeWeight = connection.prepareStatement(
+                "UPDATE [Package] SET [Weight] = ? WHERE [IdPkg] = ? AND [DeliveryStatus] = 0"
+        )){
+            changeWeight.setBigDecimal(1, newWeight);
+            changeWeight.setInt(2, packageId);
+
+            return changeWeight.executeUpdate() > 0;
+        }catch (SQLException e){
+            return false;
+        }
     }
 
     @Override
     public boolean changeType(int packageId, int newType) {
-        return false;
+        final var connection = DB.getInstance().getConnection();
+        try(final var changeType = connection.prepareStatement(
+                "UPDATE [Package] SET [PackageType] = ? WHERE [IdPkg] = ? AND [DeliveryStatus] = 0"
+        )){
+            changeType.setInt(1, newType);
+            changeType.setInt(2,packageId);
+
+            return changeType.executeUpdate() > 0;
+        }catch (SQLException e){
+            return false;
+        }
     }
 
     @Override
