@@ -429,15 +429,21 @@ BEGIN
              JOIN [FuelType] ft ON (v.[FuelType] = ft.[IdFuelT])
     WHERE c.[IdUser] = @IdCourier
 
-    DECLARE @earned DECIMAL(10, 3)
-    -- Calculate drive earnings and distance driven
-    SELECT @earned = SUM(
-            [Price] -
+    PRINT @fuelConsumption
+    PRINT @fuelPrice
+
+    DECLARE @totalGain DECIMAL(10, 3)
+    DECLARE @totalLoss DECIMAL(10, 3)
+    SELECT
+        @totalGain = SUM([Price]),
+        @totalLoss = SUM(
             [dbo].[fPackageDistance](d.[IdPkg])
-                * @fuelConsumption
-                * @fuelPrice)
+        ) * @fuelConsumption * @fuelPrice
     FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
-    WHERE d.[IdUser] = @IdCourier;
+    WHERE d.[IdUser] = @IdCourier
+
+    PRINT @totalGain
+    PRINT @totalLoss
 
     -- Delete packages from Drive
     DELETE FROM [Drive]
@@ -447,7 +453,7 @@ BEGIN
     -- Update courier total profit and package count
     UPDATE [Courier]
     SET
-        [TotalProfit] = [TotalProfit] + @earned,
+        [TotalProfit] = [TotalProfit] + (@totalGain - @totalLoss),
         [DeliveredPackages] = @deliverPackages
     WHERE [IdUser] = @IdCourier
 
