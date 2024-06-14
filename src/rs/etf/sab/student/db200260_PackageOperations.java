@@ -282,8 +282,7 @@ public class db200260_PackageOperations implements PackageOperations {
         }
     }
 
-    @Override
-    public int driveNextPackage(String courierUserName) {
+    private int driveNextPackageSP(String courierUserName) {
         final var connection = DB.getInstance().getConnection();
         try (final var driveNext = connection.prepareCall(
                 "{? = call [spDriveNext](?, ?)}"
@@ -297,5 +296,10 @@ public class db200260_PackageOperations implements PackageOperations {
         } catch (SQLException e) {
             return -2;
         }
+    }
+
+    @Override
+    public int driveNextPackage(String courierUserName) {
+        return driveNextPackageSP(courierUserName);
     }
 }
