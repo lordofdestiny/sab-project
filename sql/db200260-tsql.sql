@@ -352,9 +352,7 @@ BEGIN
     DECLARE @IdCourier int
     DECLARE @Status int
 
-    SELECT
-        @IdCourier = u.[IdUser],
-        @Status = [Status]
+    SELECT @IdCourier = u.[IdUser], @Status = [Status]
     FROM [User] u JOIN [Courier] c ON (u.[IdUser] = c.[IdUser])
     WHERE [Username] = @username
     IF @@ROWCOUNT = 0 -- Not a courier
@@ -363,95 +361,98 @@ BEGIN
         RETURN 1
     END
 
-    IF @Status = 0
-    BEGIN
-        -- Begin drive
-        --------------------------------------------------
-        -- First check that there are packages to drive
-        IF NOT EXISTS (
-            SELECT * FROM [Package]
+    BEGIN TRANSACTION
+    BEGIN TRY
+        IF @Status = 0
+        BEGIN
+            -- First check that there are packages to drive
+            IF NOT EXISTS (
+                SELECT * FROM [Package]
+                WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
+            )
+            BEGIN
+                ROLLBACK TRANSACTION
+                SET @result = -1
+                RETURN 2;
+            END
+            -- Begin drive
+            --------------------------------------------------
+            -- Set Courier to driving state
+            UPDATE [Courier] SET [Status] = 1 WHERE [IdUser] = @IdCourier
+            -- Add Packages into the drive
+            INSERT INTO [Drive]([IdUser], [IdPkg])
+            SELECT @IdCourier, [IdPkg] FROM [Package]
             WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
+            -- Set all packages as picked up
+            UPDATE [Package] SET [DeliveryStatus] = 2
+            WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
+        END
+        -- Drive the package
+        --------------------------------------------------
+        -- Find package to deliver
+        DECLARE @IdCurrentPkg int = (
+            SELECT TOP (1) d.[IdPkg]
+            FROM [Drive] d JOIN [Package] p ON (d.[IdPkg] = p.[IdPkg])
+            WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
+            ORDER BY [TimeAccepted]
+        )
+
+        -- Mark it as delivered
+        UPDATE [Package] SET [DeliveryStatus] = 3 WHERE [IdPkg] = @IdCurrentPkg
+        SET @result = @IdCurrentPkg
+
+        -- If Drive is finished
+        IF NOT EXISTS(
+            SELECT * FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+            WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
         )
         BEGIN
-            SET @result = -1
-            RETURN 2;
+            -- Finish Drive
+            --------------------------------------------------
+            -- Select fuel consumption of the vehicle and its fuel price
+            DECLARE @fuelPricePerKm DECIMAL(10, 3)
+            SELECT @fuelPricePerKm = [FuelConsumption] * [FuelPrice]
+            FROM [Vehicle] v
+                     JOIN [Courier] c ON (v.[IdVeh] = c.[IdVeh])
+                     JOIN [FuelType] ft ON (v.[FuelType] = ft.[IdFuelT])
+            WHERE c.[IdUser] = @IdCourier
+
+            DECLARE @totalGain DECIMAL(10, 3)
+            SELECT @totalGain = SUM([Price])
+            FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+            WHERE d.[IdUser] = @IdCourier
+
+            DECLARE @totalDistance DECIMAL(10, 3);
+            WITH Path(currFrom, currTo, nextFrom) AS (
+                SELECT IdDistFrom, IdDistTo, LEAD(IdDistFrom) OVER (ORDER BY [TimeAccepted])
+                FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+                WHERE [IdCourier] = @IdCourier
+            )
+            SELECT @totalDistance = SUM(
+                dbo.[fDistrictDistance](currFrom, currTo) +
+                COALESCE(dbo.[fDistrictDistance](currTo, nextFrom), 0)
+            )
+            FROM Path
+
+            -- Update courier total profit and package count
+            UPDATE [Courier]
+            SET
+                [TotalProfit] = [TotalProfit] + (@totalGain - @totalDistance* @fuelPricePerKm),
+                [DeliveredPackages] = [DeliveredPackages] + (
+                    SELECT COUNT(*) FROM [Drive] WHERE Drive.[IdUser] = @IdCourier
+                )
+            WHERE [IdUser] = @IdCourier
+
+            -- Delete packages from Drive
+            DELETE FROM [Drive] WHERE [IdUser] = @IdCourier
         END
-        -- Set Courier to driving state
-        UPDATE [Courier] SET [Status] = 1
-        WHERE [IdUser] = @IdCourier
-        -- Add Packages into the drive
-        INSERT INTO [Drive]([IdUser], [IdPkg])
-        SELECT @IdCourier, [IdPkg] FROM [Package]
-        WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
-        -- Set all packages as picked up
-        UPDATE [Package] SET [DeliveryStatus] = 2
-        WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
-    END
-    -- Drive the package
-    --------------------------------------------------
-    -- Find package to deliver
-    DECLARE @IdCurrentPkg int = (
-        SELECT TOP (1) d.[IdPkg]
-        FROM [Drive] d JOIN [Package] p ON (d.[IdPkg] = p.[IdPkg])
-        WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
-        ORDER BY [TimeAccepted]
-    )
 
-    -- Mark it as delivered
-    UPDATE [Package] SET [DeliveryStatus] = 3 WHERE [IdPkg] = @IdCurrentPkg
-    SET @result = @IdCurrentPkg
-
-    -- If Drive is not finished
-    IF EXISTS(
-        SELECT * FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
-        WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
-    ) RETURN 0
-
-    -- Finish Drive
-    --------------------------------------------------
-    -- Select fuel consumption of the vehicle and its fuel price
-    DECLARE @fuelConsumption DECIMAL(10, 3)
-    DECLARE @fuelPrice DECIMAL(10, 3)
-    SELECT
-        @fuelConsumption = [FuelConsumption],
-        @fuelPrice = [FuelPrice]
-    FROM [Vehicle] v
-             JOIN [Courier] c ON (v.[IdVeh] = c.[IdVeh])
-             JOIN [FuelType] ft ON (v.[FuelType] = ft.[IdFuelT])
-    WHERE c.[IdUser] = @IdCourier
-
-    DECLARE @totalGain DECIMAL(10, 3)
-    SELECT @totalGain = SUM([Price])
-    FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
-    WHERE d.[IdUser] = @IdCourier
-
-    DECLARE @totalDistance DECIMAL(10, 3);
-    WITH DrivePackages(IdDistFrom, IdDistTo, TimeAccepted) AS (
-        SELECT IdDistFrom, IdDistTo, TimeAccepted
-        FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
-        WHERE [IdCourier] = @IdCourier
-    ),
-    Distances (forPackage, untilNext) AS (
-        SELECT
-            dbo.[fDistrictDistance](IdDistFrom, IdDistTo),
-            dbo.[fDistrictDistance](IdDistTo, LEAD(IdDistFrom) OVER (ORDER BY [TimeAccepted]))
-        FROM [DrivePackages]
-    )
-    SELECT @totalDistance = SUM(forPackage + COALESCE(untilNext, 0))
-    FROM Distances
-
-    -- Update courier total profit and package count
-    UPDATE [Courier]
-    SET
-        [TotalProfit] = [TotalProfit] + (@totalGain - @totalDistance*@fuelPrice*@fuelConsumption),
-        [DeliveredPackages] = [DeliveredPackages] + (
-            SELECT COUNT(*) FROM [Drive] WHERE Drive.[IdUser] = @IdCourier
-        )
-    WHERE [IdUser] = @IdCourier
-
-    -- Delete packages from Drive
-    DELETE FROM [Drive] WHERE [IdUser] = @IdCourier
-
-    RETURN 0
+        COMMIT TRANSACTION
+        RETURN 0
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION
+        RETURN 3;
+    END CATCH
 END
 GO
