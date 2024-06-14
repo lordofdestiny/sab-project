@@ -197,24 +197,22 @@ END
 go
 
 -- Function to calculate distance driven to deliver the package
-DROP FUNCTION IF EXISTS [fPackageDistance];
+DROP FUNCTION IF EXISTS [fDistrictDistance];
 GO
 
-CREATE FUNCTION [fPackageDistance](
-    @IdPkg int
+CREATE FUNCTION [fDistrictDistance](
+    @IdDistFrom int,
+    @IdDistTo int
 )
-RETURNS DECIMAL(10, 3)
-AS
+    RETURNS DECIMAL(10, 3)
 BEGIN
     RETURN (
         SELECT SQRT(
             SQUARE(dFrom.[CoordinateX] - dTo.[CoordinateX]) +
             SQUARE(dFrom.[CoordinateY] - dTo.[CoordinateY])
         )
-        FROM [Package] p
-            JOIN [District] dFrom ON (p.[IdDistFrom] = dFrom.[IdDist])
-            JOIN [District] dTo ON (p.[IdDistTo] = dTo.[IdDist])
-        WHERE [IdPkg] = @IdPkg
+        FROM [District] dFrom, [District] dTo
+        WHERE dFrom.[IdDist] = @IdDistFrom AND dTo.[IdDist] = @IdDistTo
     )
 END
 GO
@@ -231,7 +229,7 @@ BEGIN
     RETURN (
         SELECT (
             pt.[InitialPrice] + (pt.[WeightFactor] * p.[Weight]) * pt.[PricePerKg]
-        ) * [dbo].[fPackageDistance](@IdPkg)
+        ) * [dbo].[fDistrictDistance](IdDistFrom, IdDistTo)
         FROM [Package] p JOIN [PackageType] pt ON (p.[PackageType] = pt.[IdPkgT])
         WHERE p.[IdPkg] = @IdPkg
     )
@@ -409,7 +407,6 @@ BEGIN
         WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
     ) RETURN 0
 
-
     -- Finish Drive
     --------------------------------------------------
     -- Select fuel consumption of the vehicle and its fuel price
@@ -424,19 +421,29 @@ BEGIN
     WHERE c.[IdUser] = @IdCourier
 
     DECLARE @totalGain DECIMAL(10, 3)
-    DECLARE @totalLoss DECIMAL(10, 3)
-    SELECT
-        @totalGain = SUM([Price]),
-        @totalLoss = SUM(
-            [dbo].[fPackageDistance](d.[IdPkg])
-        ) * @fuelConsumption * @fuelPrice
+    SELECT @totalGain = SUM([Price])
     FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
     WHERE d.[IdUser] = @IdCourier
+
+    DECLARE @totalDistance DECIMAL(10, 3);
+    WITH DrivePackages(IdDistFrom, IdDistTo, TimeAccepted) AS (
+        SELECT IdDistFrom, IdDistTo, TimeAccepted
+        FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+        WHERE [IdCourier] = @IdCourier
+    ),
+    Distances (forPackage, untilNext) AS (
+        SELECT
+            dbo.[fDistrictDistance](IdDistFrom, IdDistTo),
+            dbo.[fDistrictDistance](IdDistTo, LEAD(IdDistFrom) OVER (ORDER BY [TimeAccepted]))
+        FROM [DrivePackages]
+    )
+    SELECT @totalDistance = SUM(forPackage + COALESCE(untilNext, 0))
+    FROM Distances
 
     -- Update courier total profit and package count
     UPDATE [Courier]
     SET
-        [TotalProfit] = [TotalProfit] + (@totalGain - @totalLoss),
+        [TotalProfit] = [TotalProfit] + (@totalGain - @totalDistance*@fuelPrice*@fuelConsumption),
         [DeliveredPackages] = [DeliveredPackages] + (
             SELECT COUNT(*) FROM [Drive] WHERE Drive.[IdUser] = @IdCourier
         )
