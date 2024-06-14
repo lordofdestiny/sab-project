@@ -62,8 +62,8 @@ CREATE TABLE [District]
 (
     [IdDist]             integer  IDENTITY ( 1,1 )  NOT NULL ,
     [IdCity]             integer  NOT NULL ,
-    [CoordinateX]        [MyDecimal]  NOT NULL ,
-    [CoordinateY]        [MyDecimal]  NOT NULL ,
+    [CoordinateX]        integer  NOT NULL ,
+    [CoordinateY]        integer  NOT NULL ,
     [Name]               varchar(100)  NOT NULL
 )
 go
