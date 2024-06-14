@@ -194,6 +194,29 @@ BEGIN
 END
 go
 
+-- Function to calculate distance driven to deliver the package
+DROP FUNCTION IF EXISTS [fPackageDistance];
+GO
+
+CREATE FUNCTION [fPackageDistance](
+    @IdPkg int
+)
+RETURNS DECIMAL(10, 3)
+AS
+BEGIN
+    RETURN (
+        SELECT CAST(SQRT(
+            SQUARE(dFrom.[CoordinateX] - dTo.[CoordinateX]) +
+            SQUARE(dFrom.[CoordinateY] - dTo.[CoordinateY])
+        ) AS DECIMAL(10, 3))
+        FROM [Package] p
+            JOIN [District] dFrom ON (p.[IdDistFrom] = dFrom.[IdDist])
+            JOIN [District] dTo ON (p.[IdDistTo] = dTo.[IdDist])
+        WHERE [IdPkg] = @IdPkg
+    )
+END
+GO
+
 -- Function to calculate the price for the package
 DROP FUNCTION IF EXISTS [fDeliveryPrice];
 GO
@@ -201,37 +224,17 @@ GO
 CREATE FUNCTION [fDeliveryPrice](
     @IdPkg int
 )
-    RETURNS DECIMAL(10, 3)
+RETURNS DECIMAL(10, 3)
 BEGIN
-    DECLARE @fromDistX DECIMAL(10, 3)
-    DECLARE @fromDistY DECIMAL(10, 3)
-    DECLARE @toDistX DECIMAL(10, 3)
-    DECLARE @toDistY DECIMAL (10, 3)
-    DECLARE @weight DECIMAL(10, 3)
-    DECLARE @basePrice DECIMAL(10, 3)
-    DECLARE @pricePerKg DECIMAL(10, 3)
-    DECLARE @weightFactor DECIMAL(10, 3)
-
-    SELECT
-        @fromDistX = dFrom.[CoordinateX],
-        @fromDistY = dFrom.[CoordinateY],
-        @toDistX = dTo.[CoordinateX],
-        @toDistY = dTo.[CoordinateY],
-        @weight = p.[Weight],
-        @basePrice = pt.InitialPrice,
-        @pricePerKg = pt.PricePerKg,
-        @weightFactor = pt.WeightFactor
-    FROM [Package] p
-             JOIN [District] dFrom ON (p.[IdDistFrom] = dFrom.[IdDist])
-             JOIN [District] dTo ON (p.[IdDistTo] = dTo.[IdDist])
-             JOIN [PackageType] pt ON (p.[PackageType] = pt.IdPkgT)
-    WHERE p.[IdPkg] = @IdPkg
-
-    -- Calculate euclidean distance
-    DECLARE @distance DECIMAL(10, 3)
-    SET @distance = SQRT(SQUARE(@fromDistX - @toDistX) + SQUARE(@fromDistY - @toDistY))
-
-    RETURN (@basePrice + (@weightFactor * @weight) * @pricePerKg) * @distance
+    RETURN (
+        SELECT CAST((
+                pt.[InitialPrice] + (pt.[WeightFactor] * p.[Weight]) * pt.[PricePerKg]
+            ) * [dbo].[fPackageDistance](@IdPkg)
+            AS DECIMAL(10, 3)
+        )
+        FROM [Package] p JOIN [PackageType] pt ON (p.[PackageType] = pt.[IdPkgT])
+        WHERE p.[IdPkg] = @IdPkg
+    )
 END
 GO
 
@@ -293,7 +296,7 @@ BEGIN
         RETURN
     END
 
-    DECLARE cursorConfirmedPacakges CURSOR LOCAL FOR
+    DECLARE [@cursorConfirmedPackages] CURSOR LOCAL FOR
     SELECT I.[IdPkg], I.[IdCourier], D.[IdCourier]
     FROM INSERTED I JOIN DELETED D ON (I.IdPkg = D.IdPkg)
     WHERE I.[IdCourier] IS NOT NULL AND D.[IdCourier] IS NULL
@@ -302,9 +305,9 @@ BEGIN
     DECLARE @IdCourierOld int
     DECLARE @IdCourierNew int
 
-    OPEN cursorConfirmedPacakges
+    OPEN [@cursorConfirmedPackages]
 
-    FETCH NEXT FROM cursorConfirmedPacakges
+    FETCH NEXT FROM [@cursorConfirmedPackages]
     INTO @IdPkg, @IdCourierNew, @IdCourierOld
 
     WHILE @@FETCH_STATUS = 0
@@ -333,11 +336,121 @@ BEGIN
             END
         -- and delete all offers for that package
         DELETE FROM [Offer] WHERE [IdPkg] = @IdPkg
-        FETCH NEXT FROM cursorConfirmedPacakges
+        FETCH NEXT FROM [@cursorConfirmedPackages]
             INTO @IdPkg, @IdCourierNew, @IdCourierOld
     END
 
-    CLOSE cursorConfirmedPacakges
-    DEALLOCATE cursorConfirmedPacakges
+    CLOSE [@cursorConfirmedPackages]
+    DEALLOCATE [@cursorConfirmedPackages]
+END
+GO
+
+DROP PROCEDURE IF EXISTS [spDriveNext]
+GO
+
+CREATE PROCEDURE [spDriveNext]
+    @username VARCHAR(100),
+    @result int OUTPUT
+AS
+BEGIN
+    DECLARE @IdCourier int
+    DECLARE @Status int
+
+    SELECT
+        @IdCourier = u.[IdUser],
+        @Status = [Status]
+    FROM [User] u JOIN [Courier] c ON (u.[IdUser] = c.[IdUser])
+    WHERE [Username] = @username
+    IF @@ROWCOUNT = 0 -- Not a courier
+    BEGIN
+        SET @result = -2
+        RETURN 1
+    END
+
+    IF @Status = 0
+    BEGIN
+        -- Begin drive
+        --------------------------------------------------
+        -- First check that there are packages to drive
+        IF NOT EXISTS (
+            SELECT * FROM [Package]
+            WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
+        )
+        BEGIN
+            SET @result = -1
+            RETURN 2;
+        END
+        -- Set Courier to driving state
+        UPDATE [Courier] SET [Status] = 1
+        WHERE [IdUser] = @IdCourier
+        -- Add Packages into the drive
+        INSERT INTO [Drive]([IdUser], [IdPkg])
+        SELECT @IdCourier, [IdPkg] FROM [Package]
+        WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
+        -- Set all packages as picked up
+        UPDATE [Package] SET [DeliveryStatus] = 2
+        WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
+    END
+    -- Drive the package
+    --------------------------------------------------
+    -- Find package to deliver
+    DECLARE @IdCurrentPkg int = (
+        SELECT TOP(1) d.[IdPkg]
+        FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+        WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
+        ORDER BY [TimeAccepted]
+    )
+
+    -- Mark it as delivered
+    UPDATE [Package] SET [DeliveryStatus] = 3
+    WHERE [IdPkg] = @IdCurrentPkg
+    SET @result = @IdCurrentPkg
+
+    -- If Drive is not finished
+    IF EXISTS(
+        SELECT *
+        FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+        WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
+    )
+    BEGIN
+        RETURN 0
+    END
+
+    -- Finish Drive
+    --------------------------------------------------
+    -- Select fuel consumption of the vehicle and its fuel price
+    DECLARE @fuelConsumption DECIMAL(10, 3)
+    DECLARE @fuelPrice DECIMAL(10, 3)
+    SELECT
+        @fuelConsumption = [FuelConsumption],
+        @fuelPrice = [FuelPrice]
+    FROM [Vehicle] v
+             JOIN [Courier] c ON (v.[IdVeh] = c.[IdVeh])
+             JOIN [FuelType] ft ON (v.[FuelType] = ft.[IdFuelT])
+    WHERE c.[IdUser] = @IdCourier
+
+    DECLARE @earned DECIMAL(10, 3)
+    -- Calculate drive earnings and distance driven
+    SELECT @earned = SUM(
+            [Price] -
+            [dbo].[fPackageDistance](d.[IdPkg])
+                * @fuelConsumption
+                * @fuelPrice)
+    FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+    WHERE d.[IdUser] = @IdCourier;
+
+    -- Delete packages from Drive
+    DELETE FROM [Drive]
+    WHERE [IdUser] = @IdCourier
+    DECLARE @deliverPackages int = @@ROWCOUNT
+
+    -- Update courier total profit and package count
+    UPDATE [Courier]
+    SET
+        [TotalProfit] = [TotalProfit] + @earned,
+        [DeliveredPackages] = @deliverPackages
+    WHERE [IdUser] = @IdCourier
+
+    RETURN 0
 END
 GO

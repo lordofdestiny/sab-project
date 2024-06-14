@@ -270,9 +270,9 @@ public class db200260_PackageOperations implements PackageOperations {
                         "WHERE [IdUser] = (SELECT [IdUser] FROM dbo.[User] WHERE [Username] = ?)"
         )) {
             getDrive.setString(1, courierUsername);
-            try(final var packageSet = getDrive.executeQuery()){
+            try (final var packageSet = getDrive.executeQuery()) {
                 final var packages = new ArrayList<Integer>();
-                while (packageSet.next()){
+                while (packageSet.next()) {
                     packages.add(packageSet.getInt(1));
                 }
                 return packages;
@@ -284,6 +284,18 @@ public class db200260_PackageOperations implements PackageOperations {
 
     @Override
     public int driveNextPackage(String courierUserName) {
-        return 0;
+        final var connection = DB.getInstance().getConnection();
+        try (final var driveNext = connection.prepareCall(
+                "{? = call [spDriveNext](?, ?)}"
+        )) {
+            driveNext.registerOutParameter(1, Types.INTEGER);
+            driveNext.setString(2, courierUserName);
+            driveNext.registerOutParameter(3, Types.INTEGER);
+            driveNext.execute();
+
+            return driveNext.getInt(3);
+        } catch (SQLException e) {
+            return -2;
+        }
     }
 }
