@@ -15,13 +15,13 @@ BEGIN
     IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits
 
     SELECT @IdVeh = [IdVeh] FROM [Vehicle] WHERE [LicencePlateNumber] = @licencePlateNumber;
-    IF @@ROWCOUNT = 0 RETURN 2; -- Verify that vehicle exists
+    IF @@ROWCOUNT = 0 RETURN 2 -- Verify that vehicle exists
 
     -- Verify that user is not already a courier
-    IF EXISTS (SELECT [IdUser] FROM [Courier] WHERE [IdUser] = @IdUser) RETURN 3;
+    IF EXISTS (SELECT [IdUser] FROM [Courier] WHERE [IdUser] = @IdUser) RETURN 3
 
     -- Verify that vehicle is not already used, before creating the request
-    IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh ) RETURN 4;
+    IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh) RETURN 4
 
     -- Try to insert a new request, fails if user already posted a request
     BEGIN TRY
@@ -79,7 +79,8 @@ BEGIN
     DECLARE @IdVeh int
 
     SELECT @IdUser = u.[IdUser], @IdVeh = [IdVeh]
-    FROM [CourierRequest] cr JOIN [User] u ON (cr.[IdUser] = u.[IdUser])
+    FROM [CourierRequest] cr
+        JOIN [User] u ON (cr.[IdUser] = u.[IdUser])
     WHERE [Username] = @username;
     IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits and that he has a request
 
@@ -87,7 +88,7 @@ BEGIN
     SET @errorcode = 0
     BEGIN TRY
         -- Insert user as courier
-        INSERT INTO [Courier](IdUser, IdVeh) VALUES(@IdUser, @IdVeh)
+        INSERT INTO [Courier](IdUser, IdVeh) VALUES (@IdUser, @IdVeh)
         IF @@ROWCOUNT != 1 SET @errorcode = 2 -- Verify that the user was inserted
 
         -- Delete request
@@ -131,7 +132,7 @@ BEGIN
     SET @errorcode = 0
     BEGIN TRY
         -- Insert user as courier
-        INSERT INTO [Courier](IdUser, IdVeh) VALUES(@IdUser, @IdVeh)
+        INSERT INTO [Courier](IdUser, IdVeh) VALUES (@IdUser, @IdVeh)
         IF @@ROWCOUNT != 1 SET @errorcode = 3 -- Verify that the user was inserted
 
         -- Delete request in it existed before
@@ -167,7 +168,8 @@ BEGIN
     DECLARE @PkgStatus int
 
     SELECT @IdCourier = c.[IdUser], @CourierStatus = [Status]
-    FROM [Courier] c JOIN [User] u ON (c.[IdUser] = u.[IdUser])
+    FROM [Courier] c
+        JOIN [User] u ON (c.[IdUser] = u.[IdUser])
     WHERE u.[Username] = @courierUsername
     IF @@ROWCOUNT = 0 RETURN 1 -- Verify that user is a courier
     IF @CourierStatus != 0 RETURN 2 -- Verify that the courier is not driving
@@ -178,7 +180,7 @@ BEGIN
 
     IF @pricePercentage IS NULL
     BEGIN
-        SELECT @pricePercentage =  CONVERT(DECIMAL(10,3), -10 + (10 - -10)*RAND(CHECKSUM(NEWID())));
+        SELECT @pricePercentage = CONVERT(DECIMAL(10, 3), -10 + (10 - -10) * RAND(CHECKSUM(NEWID())));
     END
 
     BEGIN TRY
@@ -205,10 +207,10 @@ RETURNS DECIMAL(10, 3)
 AS
 BEGIN
     RETURN (
-        SELECT CAST(SQRT(
+        SELECT SQRT(
             SQUARE(dFrom.[CoordinateX] - dTo.[CoordinateX]) +
             SQUARE(dFrom.[CoordinateY] - dTo.[CoordinateY])
-        ) AS DECIMAL(10, 3))
+        )
         FROM [Package] p
             JOIN [District] dFrom ON (p.[IdDistFrom] = dFrom.[IdDist])
             JOIN [District] dTo ON (p.[IdDistTo] = dTo.[IdDist])
@@ -227,11 +229,9 @@ CREATE FUNCTION [fDeliveryPrice](
 RETURNS DECIMAL(10, 3)
 BEGIN
     RETURN (
-        SELECT CAST((
-                pt.[InitialPrice] + (pt.[WeightFactor] * p.[Weight]) * pt.[PricePerKg]
-            ) * [dbo].[fPackageDistance](@IdPkg)
-            AS DECIMAL(10, 3)
-        )
+        SELECT (
+            pt.[InitialPrice] + (pt.[WeightFactor] * p.[Weight]) * pt.[PricePerKg]
+        ) * [dbo].[fPackageDistance](@IdPkg)
         FROM [Package] p JOIN [PackageType] pt ON (p.[PackageType] = pt.[IdPkgT])
         WHERE p.[IdPkg] = @IdPkg
     )
@@ -248,9 +248,7 @@ BEGIN
     DECLARE @IdCourier int
     DECLARE @IdPkg int
 
-    SELECT
-        @IdCourier = [IdUser],
-        @IdPkg = [IdPkg]
+    SELECT @IdCourier = [IdUser], @IdPkg = [IdPkg]
     FROM [Offer] WHERE [IdOff] = @IdOff
     IF @@ROWCOUNT = 0 RETURN 1;
 
@@ -270,7 +268,7 @@ DROP TRIGGER IF EXISTS [TR_TransportOffer_Confirm]
 GO
 
 CREATE TRIGGER [TR_TransportOffer_Confirm]
-ON  [Package]
+ON [Package]
 AFTER UPDATE
 AS
 BEGIN
@@ -280,15 +278,15 @@ BEGIN
         SELECT * FROM INSERTED I JOIN DELETED D ON (I.IdPkg = D.IdPkg)
         WHERE
                 I.[IdSender] != D.[IdSender] -- Cannot change sender
-           OR	I.[DeliveryStatus] < D.[DeliveryStatus] -- Cannot go to previous states
-           OR	(D.[DeliveryStatus] > 0 AND ( -- If was accepted
-                I.[PackageType] != D.[PackageType] OR -- Cannot change type
-                I.[IdDistFrom] != D.[IdDistFrom] OR -- Cannot change origin district
-                I.[IdDistTo] != D.[IdDistTo] OR -- cannot change destination district
-                I.[Weight] != D.[Weight] OR -- cannot change weight
-                I.[IdCourier] IS NULL OR -- cannot unset courier
-                I.[IdCourier] != D.[IdCourier] -- cannot change courier
-           ))
+            OR  I.[DeliveryStatus] < D.[DeliveryStatus] -- Cannot go to previous states
+            OR  (D.[DeliveryStatus] > 0 AND ( -- If was accepted
+                 I.[PackageType] != D.[PackageType] OR -- Cannot change type
+                 I.[IdDistFrom] != D.[IdDistFrom] OR -- Cannot change origin district
+                 I.[IdDistTo] != D.[IdDistTo] OR -- cannot change destination district
+                 I.[Weight] != D.[Weight] OR -- cannot change weight
+                 I.[IdCourier] IS NULL OR -- cannot unset courier
+                 I.[IdCourier] != D.[IdCourier] -- cannot change courier
+            ))
     )
     BEGIN
         ROLLBACK TRANSACTION
@@ -313,14 +311,14 @@ BEGIN
     WHILE @@FETCH_STATUS = 0
     BEGIN
         DECLARE @priceFactor DECIMAL(10, 3)
-        SELECT @priceFactor = (1 + [Percent] / 100) FROM [Offer]
+        SELECT @priceFactor = (1 + [Percent] / 100)FROM [Offer]
         WHERE [IdUser] = @IdCourierNew AND [IdPkg] = @IdPkg
         IF @@ROWCOUNT = 0 -- Verify that offer existed for this Courier
-            BEGIN
-                ROLLBACK TRANSACTION;
-                RAISERROR('Attempted to accept non-existent offer', 10, 2)
-                BREAK
-            END
+        BEGIN
+            ROLLBACK TRANSACTION;
+            RAISERROR ('Attempted to accept non-existent offer', 10, 2)
+            BREAK
+        END
         -- now update the status, price and time
         UPDATE [Package]
         SET
@@ -329,11 +327,11 @@ BEGIN
             [TimeAccepted] = GETDATE()
         WHERE [IdPkg] = @IdPkg
         IF @@ROWCOUNT = 0 -- Update failed for unknown reason
-            BEGIN
-                ROLLBACK TRANSACTION
-                RAISERROR ('Failed to set package status, price and date', 10, 3);
-                BREAK
-            END
+        BEGIN
+            ROLLBACK TRANSACTION
+            RAISERROR ('Failed to set package status, price and date', 10, 3);
+            BREAK
+        END
         -- and delete all offers for that package
         DELETE FROM [Offer] WHERE [IdPkg] = @IdPkg
         FETCH NEXT FROM [@cursorConfirmedPackages]
@@ -395,26 +393,22 @@ BEGIN
     --------------------------------------------------
     -- Find package to deliver
     DECLARE @IdCurrentPkg int = (
-        SELECT TOP(1) d.[IdPkg]
-        FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+        SELECT TOP (1) d.[IdPkg]
+        FROM [Drive] d JOIN [Package] p ON (d.[IdPkg] = p.[IdPkg])
         WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
         ORDER BY [TimeAccepted]
     )
 
     -- Mark it as delivered
-    UPDATE [Package] SET [DeliveryStatus] = 3
-    WHERE [IdPkg] = @IdCurrentPkg
+    UPDATE [Package] SET [DeliveryStatus] = 3 WHERE [IdPkg] = @IdCurrentPkg
     SET @result = @IdCurrentPkg
 
     -- If Drive is not finished
     IF EXISTS(
-        SELECT *
-        FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
+        SELECT * FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
         WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
-    )
-    BEGIN
-        RETURN 0
-    END
+    ) RETURN 0
+
 
     -- Finish Drive
     --------------------------------------------------
@@ -429,9 +423,6 @@ BEGIN
              JOIN [FuelType] ft ON (v.[FuelType] = ft.[IdFuelT])
     WHERE c.[IdUser] = @IdCourier
 
-    PRINT @fuelConsumption
-    PRINT @fuelPrice
-
     DECLARE @totalGain DECIMAL(10, 3)
     DECLARE @totalLoss DECIMAL(10, 3)
     SELECT
@@ -442,20 +433,17 @@ BEGIN
     FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
     WHERE d.[IdUser] = @IdCourier
 
-    PRINT @totalGain
-    PRINT @totalLoss
-
-    -- Delete packages from Drive
-    DELETE FROM [Drive]
-    WHERE [IdUser] = @IdCourier
-    DECLARE @deliverPackages int = @@ROWCOUNT
-
     -- Update courier total profit and package count
     UPDATE [Courier]
     SET
         [TotalProfit] = [TotalProfit] + (@totalGain - @totalLoss),
-        [DeliveredPackages] = @deliverPackages
+        [DeliveredPackages] = [DeliveredPackages] + (
+            SELECT COUNT(*) FROM [Drive] WHERE Drive.[IdUser] = @IdCourier
+        )
     WHERE [IdUser] = @IdCourier
+
+    -- Delete packages from Drive
+    DELETE FROM [Drive] WHERE [IdUser] = @IdCourier
 
     RETURN 0
 END
