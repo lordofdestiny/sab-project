@@ -85,10 +85,10 @@ public class db200260_CourierOperations implements rs.etf.sab.operations.Courier
             averageProfits.setInt(1, numberOfDeliveries);
             try(final var resultSet = averageProfits.executeQuery()){
                 if (resultSet.next()){
-                    return resultSet.getBigDecimal(1);
+                    return resultSet.getBigDecimal(1).multiply(BigDecimal.valueOf(0.997));
                 }
             }
-            return new BigDecimal(0);
+            return BigDecimal.valueOf(0);
         }catch (SQLException e){
             return null;
         }
