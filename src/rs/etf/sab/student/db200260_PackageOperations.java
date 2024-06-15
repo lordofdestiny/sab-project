@@ -18,7 +18,7 @@ public class db200260_PackageOperations implements PackageOperations {
         final var connection = DB.getInstance().getConnection();
         try (final var insertPackage = connection.prepareStatement(
                 "INSERT INTO [Package](IdDistFrom, IdDistTo, IdSender, Weight, PackageType)" +
-                        " VALUES (?, ?, (SELECT [IdUser] FROM [User] WHERE [Username] = ?), ?, ?)",
+                        "VALUES (?, ?, (SELECT [IdUser] FROM [User] WHERE [Username] = ?), ?, ?)",
                 PreparedStatement.RETURN_GENERATED_KEYS
         )) {
             insertPackage.setInt(1, districtFrom);
@@ -86,9 +86,7 @@ public class db200260_PackageOperations implements PackageOperations {
     public List<Integer> getAllOffers() {
         final var connection = DB.getInstance().getConnection();
         try (final var getOffers = connection.createStatement();
-             final var offerIdSet = getOffers.executeQuery(
-                     "SELECT [IdOff] FROM [Offer]"
-             )
+             final var offerIdSet = getOffers.executeQuery("SELECT [IdOff] FROM [Offer]")
         ) {
             final var offers = new ArrayList<Integer>();
             while (offerIdSet.next()) {
@@ -248,9 +246,7 @@ public class db200260_PackageOperations implements PackageOperations {
     public List<Integer> getAllPackages() {
         final var connection = DB.getInstance().getConnection();
         try (final var getPackages = connection.createStatement();
-             final var packageSet = getPackages.executeQuery(
-                     "SELECT [IdPkg] FROM [Package]"
-             )
+             final var packageSet = getPackages.executeQuery("SELECT [IdPkg] FROM [Package]")
         ) {
             final var packages = new ArrayList<Integer>();
             while (packageSet.next()) {
