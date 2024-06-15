@@ -151,6 +151,7 @@ BEGIN
 END
 go
 
+-- Insert package delivery offer
 DROP PROCEDURE IF EXISTS [spInsertOffer];
 go
 
@@ -196,7 +197,7 @@ BEGIN
 END
 go
 
--- Function to calculate distance driven to deliver the package
+-- Function to calculate distance between two districts
 DROP FUNCTION IF EXISTS [fDistrictDistance];
 GO
 
@@ -236,6 +237,8 @@ BEGIN
 END
 GO
 
+-- Accept offer for package delivery
+-- Utility wrapper to avoid two subqueries
 DROP PROCEDURE IF EXISTS [spAcceptOffer];
 GO
 
@@ -341,6 +344,7 @@ BEGIN
 END
 GO
 
+-- Implements driveNextPackage interface method
 DROP PROCEDURE IF EXISTS [spDriveNext]
 GO
 
