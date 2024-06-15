@@ -387,16 +387,17 @@ BEGIN
             UPDATE [Package] SET [DeliveryStatus] = 2
             WHERE [IdCourier] = @IdCourier AND [DeliveryStatus] = 1
         END
+
         -- Drive the package
         --------------------------------------------------
         -- Find package to deliver
         DECLARE @IdCurrentPkg int = (
             SELECT TOP (1) d.[IdPkg]
-            FROM [Drive] d JOIN [Package] p ON (d.[IdPkg] = p.[IdPkg])
+            FROM [Drive] d
+                JOIN [Package] p ON (d.[IdPkg] = p.[IdPkg])
             WHERE [IdUser] = @IdCourier AND [DeliveryStatus] = 2
-            ORDER BY [TimeAccepted]
+            ORDER BY [TimeAccepted], d.[IdPkg]
         )
-
         -- Mark it as delivered
         UPDATE [Package] SET [DeliveryStatus] = 3 WHERE [IdPkg] = @IdCurrentPkg
         SET @result = @IdCurrentPkg
@@ -409,7 +410,7 @@ BEGIN
         BEGIN
             -- Finish Drive
             --------------------------------------------------
-            -- Select fuel consumption of the vehicle and its fuel price
+            -- Calculate fuel price per km
             DECLARE @fuelPricePerKm DECIMAL(10, 3)
             SELECT @fuelPricePerKm = [FuelConsumption] * [FuelPrice]
             FROM [Vehicle] v
@@ -417,30 +418,31 @@ BEGIN
                      JOIN [FuelType] ft ON (v.[FuelType] = ft.[IdFuelT])
             WHERE c.[IdUser] = @IdCourier
 
-            DECLARE @totalGain DECIMAL(10, 3)
-            SELECT @totalGain = SUM([Price])
-            FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
-            WHERE d.[IdUser] = @IdCourier
-
-            DECLARE @totalDistance DECIMAL(10, 3);
-            WITH Path(currFrom, currTo, nextFrom) AS (
-                SELECT IdDistFrom, IdDistTo, LEAD(IdDistFrom) OVER (ORDER BY [TimeAccepted])
+            -- Calculate profit and package count
+            DECLARE @driveProfit DECIMAL(10, 3);
+            DECLARE @packageCount int;
+            WITH Path(price, currFrom, currTo, nextFrom) AS (
+                SELECT
+                    [Price],
+                    [IdDistFrom], [IdDistTo],
+                    LEAD(IdDistFrom) OVER (ORDER BY [TimeAccepted])
                 FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
                 WHERE [IdCourier] = @IdCourier
             )
-            SELECT @totalDistance = SUM(
-                dbo.[fDistrictDistance](currFrom, currTo) +
-                COALESCE(dbo.[fDistrictDistance](currTo, nextFrom), 0)
-            )
+            SELECT
+                @driveProfit = SUM(price) - SUM(
+                    dbo.[fDistrictDistance](currFrom, currTo) +
+                    COALESCE(dbo.[fDistrictDistance](currTo, nextFrom), 0)
+                ) * @fuelPricePerKm,
+                @packageCount = COUNT(*)
             FROM Path
 
-            -- Update courier total profit and package count
+            -- Update courier total profit and package count,
             UPDATE [Courier]
             SET
-                [TotalProfit] = [TotalProfit] + (@totalGain - @totalDistance* @fuelPricePerKm),
-                [DeliveredPackages] = [DeliveredPackages] + (
-                    SELECT COUNT(*) FROM [Drive] WHERE Drive.[IdUser] = @IdCourier
-                )
+                [Status] = 0, -- Drive is finished
+                [TotalProfit] = [TotalProfit] + @driveProfit,
+                [DeliveredPackages] = [DeliveredPackages] + @packageCount
             WHERE [IdUser] = @IdCourier
 
             -- Delete packages from Drive
