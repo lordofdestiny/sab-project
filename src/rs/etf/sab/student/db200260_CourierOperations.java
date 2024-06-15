@@ -16,8 +16,8 @@ public class db200260_CourierOperations implements rs.etf.sab.operations.Courier
                 "{? = call [spInsertCourier](?, ?)}"
         )) {
             insertRequest.registerOutParameter(1, Types.INTEGER);
-            insertRequest.setString("username", courierUserName);
-            insertRequest.setString("licencePlateNumber", licencePlateNumber);
+            insertRequest.setString(2, courierUserName);
+            insertRequest.setString(3, licencePlateNumber);
             insertRequest.execute();
 
             return insertRequest.getInt(1) == 0;
@@ -80,7 +80,7 @@ public class db200260_CourierOperations implements rs.etf.sab.operations.Courier
     public BigDecimal getAverageCourierProfit(int numberOfDeliveries) {
         final var connection = DB.getInstance().getConnection();
         try(final var averageProfits = connection.prepareStatement(
-                "SELECT AVG([TotalProfit]) FROM [Courier] WHERE [DeliveredPackages] > ?"
+                "SELECT AVG([TotalProfit]) FROM [Courier] WHERE [DeliveredPackages] >= ?"
         )){
             averageProfits.setInt(1, numberOfDeliveries);
             try(final var resultSet = averageProfits.executeQuery()){
