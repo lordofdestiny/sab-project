@@ -1,5 +1,28 @@
+-- Promote user into an admin
+DROP PROCEDURE IF EXISTS [spDeclareAdmin];
+GO
+
+CREATE PROCEDURE [spDeclareAdmin]
+    @username VARCHAR(100)
+AS
+BEGIN
+    DECLARE @IdUser int
+    SELECT @IdUser= [IdUser] FROM [User] WHERE [Username] = @username
+    IF @@ROWCOUNT = 0 RETURN 2 -- User does not exist
+
+    BEGIN TRY
+        INSERT INTO [Admin] VALUES(@IdUser);
+    END TRY
+    BEGIN CATCH
+        RETURN 1;
+    END CATCH
+
+    RETURN 0;
+END
+GO
+
 -- Insert Courier Request
-DROP PROCEDURE IF EXISTS [spInsertCourierRequest];
+DROP PROCEDURE IF EXISTS [spInsertCourierRequest]
 go
 
 CREATE PROCEDURE [spInsertCourierRequest]

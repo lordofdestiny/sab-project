@@ -3,6 +3,7 @@ package rs.etf.sab.student;
 import rs.etf.sab.student.util.DB;
 
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -27,50 +28,16 @@ public class db200260_UserOperations implements rs.etf.sab.operations.UserOperat
         }
     }
 
-    private boolean userExists(String username) {
-        final var connection = DB.getInstance().getConnection();
-        try (final var users = connection.prepareStatement(
-                "SELECT IdUser FROM [User] WHERE [Username] = ?"
-        )) {
-            users.setString(1, username);
-            try (final var resultSet = users.executeQuery()) {
-                return resultSet.next();
-            }
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    private boolean isAdmin(String username) {
-        final var connection = DB.getInstance().getConnection();
-        try (final var users = connection.prepareStatement(
-                "SELECT IdUser FROM [User] WHERE [Username] = ? AND IdUser IN (SELECT * FROM Admin)"
-        )) {
-            users.setString(1, username);
-            try (final var resultSet = users.executeQuery()) {
-                return resultSet.next();
-            }
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
     @Override
     public int declareAdmin(String userName) {
-        if (!userExists(userName)) {
-            return 2;
-        }
-        if (isAdmin(userName)) {
-            return 1;
-        }
-
         final var connection = DB.getInstance().getConnection();
-        try (final var insertAdmin = connection.prepareStatement(
-                "INSERT INTO [Admin] VALUES ((SELECT IdUser FROM [User] WHERE [Username] = ?))"
+        try (final var insertAdmin = connection.prepareCall(
+                "{? = call [spDeclareAdmin](?)}"
         )) {
-            insertAdmin.setString(1, userName);
-            final var result = insertAdmin.executeUpdate();
-            return result > 0 ? 0 : -1;
+            insertAdmin.registerOutParameter(1, Types.INTEGER);
+            insertAdmin.setString(2, userName);
+            insertAdmin.execute();
+            return insertAdmin.getInt(1);
         } catch (SQLException e) {
             return -2;
         }
