@@ -15,8 +15,8 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
                 "{? = call [spInsertCourierRequest](?, ?)}"
         )) {
             insertRequest.registerOutParameter(1, Types.INTEGER);
-            insertRequest.setString("username", userName);
-            insertRequest.setString("licencePlateNumber", licencePlateNumber);
+            insertRequest.setString(2, userName);
+            insertRequest.setString(3, licencePlateNumber);
             insertRequest.execute();
 
             return insertRequest.getInt(1) == 0;
@@ -45,8 +45,8 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
                 "{? = call [spChangeVehicleInCourierRequest](?, ?)}"
         )) {
             insertRequest.registerOutParameter(1, Types.INTEGER);
-            insertRequest.setString("username", userName);
-            insertRequest.setString("licencePlateNumber", licencePlateNumber);
+            insertRequest.setString(2, userName);
+            insertRequest.setString(3, licencePlateNumber);
             insertRequest.execute();
 
             return insertRequest.getInt(1) == 0;
@@ -58,17 +58,17 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
     @Override
     public List<String> getAllCourierRequests() {
         final var connection = DB.getInstance().getConnection();
-        try(final var getRequests = connection.createStatement();
-            final var courierRequests = getRequests.executeQuery(
-              "SELECT [Username] FROM [CourierRequest] cr JOIN [User] u ON (cr.IdUser = u.IdUser)"
-            )
-        ){
+        try (final var getRequests = connection.createStatement();
+             final var courierRequests = getRequests.executeQuery(
+                     "SELECT [Username] FROM [CourierRequest] cr JOIN [User] u ON (cr.IdUser = u.IdUser)"
+             )
+        ) {
             final var usernames = new ArrayList<String>();
-            while (courierRequests.next()){
+            while (courierRequests.next()) {
                 usernames.add(courierRequests.getString(1));
             }
             return usernames;
-        }catch (SQLException e){
+        } catch (SQLException e) {
             return List.of();
         }
     }
@@ -80,11 +80,12 @@ public class db200260_CourierRequestOperations implements rs.etf.sab.operations.
                 "{? = call [spGrantRequest](?)}"
         )) {
             insertRequest.registerOutParameter(1, Types.INTEGER);
-            insertRequest.setString("username", username);
+            insertRequest.setString(2, username);
             insertRequest.execute();
 
             return insertRequest.getInt(1) == 0;
         } catch (SQLException e) {
             return false;
-        }    }
+        }
+    }
 }
