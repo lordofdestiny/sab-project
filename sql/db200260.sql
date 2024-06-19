@@ -370,7 +370,7 @@ go
 
 ALTER TABLE [Courier]
     ADD CONSTRAINT [R_3] FOREIGN KEY ([IdUser]) REFERENCES [User]([IdUser])
-        ON DELETE CASCADE
+        ON DELETE NO ACTION
         ON UPDATE CASCADE
 go
 
