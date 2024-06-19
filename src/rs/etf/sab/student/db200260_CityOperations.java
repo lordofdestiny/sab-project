@@ -55,7 +55,7 @@ public class db200260_CityOperations implements CityOperations {
         final var connection = DB.getInstance().getConnection();
         try (final var ps = connection.prepareStatement("DELETE FROM [City] WHERE [IdCity] = ?")) {
             ps.setInt(1, idCity);
-            return ps.executeUpdate() != 0;
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             return false;
         }
