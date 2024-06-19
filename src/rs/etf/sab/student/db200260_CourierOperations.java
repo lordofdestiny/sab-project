@@ -63,7 +63,8 @@ public class db200260_CourierOperations implements rs.etf.sab.operations.Courier
         final var connection = DB.getInstance().getConnection();
         try (final var getCouriers = connection.createStatement();
              final var usernameSet = getCouriers.executeQuery(
-                     "SELECT [Username] FROM [User] u, [Courier] c WHERE u.[IdUser] = c.[IdUser]"
+                     "SELECT [Username] FROM [User] u, [Courier] c WHERE u.[IdUser] = c.[IdUser]" +
+                             "ORDER BY [TotalProfit] DESC"
              )
         ) {
             final var usernames = new ArrayList<String>();
