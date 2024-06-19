@@ -272,8 +272,7 @@ BEGIN
     DECLARE @IdCourier int
     DECLARE @IdPkg int
 
-    SELECT @IdCourier = [IdUser], @IdPkg = [IdPkg]
-    FROM [Offer] WHERE [IdOff] = @IdOff
+    SELECT @IdCourier = [IdUser], @IdPkg = [IdPkg] FROM [Offer] WHERE [IdOff] = @IdOff
     IF @@ROWCOUNT = 0 RETURN 1;
 
     BEGIN TRY
@@ -358,8 +357,9 @@ BEGIN
         END
         -- and delete all offers for that package
         DELETE FROM [Offer] WHERE [IdPkg] = @IdPkg
+
         FETCH NEXT FROM [@cursorConfirmedPackages]
-            INTO @IdPkg, @IdCourierNew, @IdCourierOld
+        INTO @IdPkg, @IdCourierNew, @IdCourierOld
     END
 
     CLOSE [@cursorConfirmedPackages]
