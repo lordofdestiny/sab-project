@@ -429,6 +429,10 @@ BEGIN
         UPDATE [Package] SET [DeliveryStatus] = 3 WHERE [IdPkg] = @IdCurrentPkg
         SET @result = @IdCurrentPkg
 
+        -- Update number of delivered packages
+        UPDATE [Courier] SET [DeliveredPackages] = [DeliveredPackages] + 1
+        WHERE [IdUser] = @IdCourier
+
         -- If Drive is finished
         IF NOT EXISTS(
             SELECT * FROM [Drive] d JOIN [Package] p ON (d.IdPkg = p.IdPkg)
@@ -447,7 +451,6 @@ BEGIN
 
             -- Calculate profit and package count
             DECLARE @driveProfit DECIMAL(10, 3);
-            DECLARE @packageCount int;
             WITH Path(price, currFrom, currTo, nextFrom) AS (
                 SELECT
                     [Price],
@@ -460,16 +463,14 @@ BEGIN
                 @driveProfit = SUM(price) - SUM(
                     dbo.[fDistrictDistance](currFrom, currTo) +
                     COALESCE(dbo.[fDistrictDistance](currTo, nextFrom), 0)
-                ) * @fuelPricePerKm,
-                @packageCount = COUNT(*)
+                ) * @fuelPricePerKm
             FROM Path
 
             -- Update courier total profit and package count,
             UPDATE [Courier]
             SET
                 [Status] = 0, -- Drive is finished
-                [TotalProfit] = [TotalProfit] + @driveProfit,
-                [DeliveredPackages] = [DeliveredPackages] + @packageCount
+                [TotalProfit] = [TotalProfit] + @driveProfit
             WHERE [IdUser] = @IdCourier
 
             -- Delete packages from Drive
