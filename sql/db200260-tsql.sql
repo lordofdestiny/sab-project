@@ -114,8 +114,8 @@ BEGIN
         INSERT INTO [Courier](IdUser, IdVeh) VALUES (@IdUser, @IdVeh)
         IF @@ROWCOUNT != 1 SET @errorcode = 2 -- Verify that the user was inserted
 
-        -- Delete request
-        DELETE FROM [CourierRequest] WHERE [IdUser] = @IdUser
+        -- Delete request and all other requests for the same vehicle
+        DELETE FROM [CourierRequest] WHERE [IdUser] = @IdUser OR [IdVeh] = @IdVeh
         IF @@ROWCOUNT != 1 SET @errorcode = 3 -- Verify that the request was deleted
     END TRY
     BEGIN CATCH
