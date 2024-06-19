@@ -72,12 +72,12 @@ BEGIN
     DECLARE @IdUser int, @IdVeh int
 
     SELECT @IdUser = [IdUser] FROM [User] WHERE [Username] = @username;
-    IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits and has a request
+    IF @@ROWCOUNT = 0 RETURN 1; -- Verify that user exits
 
     SELECT @IdVeh = [IdVeh] FROM [Vehicle] WHERE [LicencePlateNumber] = @licencePlateNumber;
     IF @@ROWCOUNT = 0 RETURN 2; -- Verify that vehicle exists
 
-    -- Verify that vehicle is not already used, before creating the request
+    -- Verify that vehicle is not already used
     IF EXISTS (SELECT [IdVeh] FROM [Courier] WHERE [IdVeh] = @IdVeh) RETURN 3;
 
     UPDATE [CourierRequest] SET [IdVeh] = @IdVeh WHERE [IdUser] = @IdUser
