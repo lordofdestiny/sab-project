@@ -486,3 +486,44 @@ BEGIN
     END CATCH
 END
 GO
+
+
+DROP TRIGGER IF EXISTS TR_Update_User_SentPackages;
+GO
+
+CREATE TRIGGER TR_Update_User_SentPackages
+ON [Package]
+AFTER INSERT, DELETE
+AS
+BEGIN
+    CREATE TABLE #UpdateList(IdUser int, Count int);
+
+    INSERT INTO #UpdateList SELECT [IdSender], 1 FROM INSERTED
+
+    INSERT INTO #UpdateList SELECT [IdSender], -1 FROM DELETED
+
+    DECLARE [@cursor] CURSOR LOCAL FOR
+    SELECT IdUser, Count FROM #UpdateList
+
+    DECLARE @IdUser int
+    DECLARE @Count int
+
+    OPEN [@cursor]
+
+    FETCH NEXT FROM [@cursor]
+    INTO @IdUser, @Count
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        UPDATE [User] SET [SentPackages] = [SentPackages] + @Count
+        WHERE [IdUser] = @IdUser
+
+        FETCH NEXT FROM [@cursor]
+        INTO @IdUser, @Count
+    END
+
+    CLOSE [@cursor]
+    DEALLOCATE [@cursor]
+
+END
+GO
