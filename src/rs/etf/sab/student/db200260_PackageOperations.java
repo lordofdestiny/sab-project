@@ -271,7 +271,7 @@ public class db200260_PackageOperations implements PackageOperations {
                 while (packageSet.next()) {
                     packages.add(packageSet.getInt(1));
                 }
-                return packages;
+                return packages.isEmpty() ? null : packages;
             }
         } catch (SQLException e) {
             return List.of();
