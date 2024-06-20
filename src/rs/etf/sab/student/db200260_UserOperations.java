@@ -8,12 +8,31 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class db200260_UserOperations implements rs.etf.sab.operations.UserOperations {
 
     @Override
     public boolean insertUser(String userName, String firstName, String lastName, String password) {
         final var connection = DB.getInstance().getConnection();
+        // Check that first and last names start with capital letters
+        // Check that first name starts with an uppercase letter
+        if (firstName.isEmpty() || !Character.isUpperCase(firstName.charAt(0))) {
+            return false;
+        }
+        // Check that last name starts with an uppercase letter
+        if (lastName.isEmpty() || !Character.isUpperCase(firstName.charAt(0))) {
+            return false;
+        }
+        // Check that password is at least 8 characters long
+        // and that it has at least one letter and one digit
+        if (password.length() <= 8
+                || !Pattern.matches(".*[a-zA-Z].*", password)
+                || !Pattern.matches(".*\\d.*", password)) {
+            return false;
+        }
+
+        // Check password format conditions
         try (final var insertUser = connection.prepareStatement(
                 "INSERT INTO [User](FirstName, LastName, Username, Password) VALUES (?, ?, ?, ?)"
         )) {
