@@ -110,23 +110,25 @@ BEGIN
     DECLARE @errorcode int
     SET @errorcode = 0
     BEGIN TRY
+        BEGIN TRANSACTION
         -- Insert user as courier
         INSERT INTO [Courier](IdUser, IdVeh) VALUES (@IdUser, @IdVeh)
         IF @@ROWCOUNT != 1 SET @errorcode = 2 -- Verify that the user was inserted
 
         -- Delete request and all other requests for the same vehicle
         DELETE FROM [CourierRequest] WHERE [IdUser] = @IdUser OR [IdVeh] = @IdVeh
-        IF @@ROWCOUNT != 1 SET @errorcode = 3 -- Verify that the request was deleted
+        IF @@ROWCOUNT = 0 SET @errorcode = 3 -- Verify that the request was deleted
     END TRY
     BEGIN CATCH
         SET @errorcode = 4
     END CATCH
 
-    IF @errorcode != 0
+    IF @errorcode > 1
     BEGIN
         ROLLBACK TRANSACTION;
     END
 
+    COMMIT TRANSACTION
     RETURN @errorcode
 END
 go
@@ -154,6 +156,7 @@ BEGIN
     DECLARE @errorcode int
     SET @errorcode = 0
     BEGIN TRY
+        BEGIN TRANSACTION
         -- Insert user as courier
         INSERT INTO [Courier](IdUser, IdVeh) VALUES (@IdUser, @IdVeh)
         IF @@ROWCOUNT != 1 SET @errorcode = 3 -- Verify that the user was inserted
@@ -165,11 +168,11 @@ BEGIN
         SET @errorcode = 4
     END CATCH
 
-    IF @errorcode != 0
+    IF @errorcode > 2
     BEGIN
         ROLLBACK TRANSACTION;
     END
-
+    COMMIT TRANSACTION
     RETURN @errorcode
 END
 go
